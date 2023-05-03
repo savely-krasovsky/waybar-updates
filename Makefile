@@ -10,7 +10,7 @@ all: $(MOFILES)
 PREFIX?=/usr/local
 BINDIR?=$(PREFIX)/bin
 SHAREDIR?=$(PREFIX)/share
-LOCALEDIR?=$(PREFIX)/locale
+LOCALEDIR?=$(SHAREDIR)/locale
 DESTDIR?=
 
 install:
