@@ -1,0 +1,104 @@
+#!/bin/bash
+
+function check_pacman_updates() {
+  if [ "$1" == "online" ]; then
+    pacman_updates=$(checkupdates)
+  elif [ "$1" == "offline" ]; then
+    pacman_updates=$(checkupdates --nosync)
+  fi
+
+  pacman_updates_checksum=$(echo "$pacman_updates" | sha256sum)
+  pacman_updates_count=$(echo "$pacman_updates" | grep -vc ^$)
+}
+
+function check_aur_updates() {
+  old_aur_packages=$(pacman -Qm)
+
+  if [ "$1" == "online" ]; then
+    rm -f /tmp/tmp.*-waybar-updates
+    tmp_aur_packages_file=$(mktemp --suffix -waybar-updates)
+    # shellcheck disable=SC2046
+    new_aur_packages=$(curl -s "https://aur.archlinux.org/rpc?v=5&type=info$(printf '&arg[]=%s' $(echo "$old_aur_packages" | cut -f1 -d' '))" |
+      jq -r '.results[] | .Name + " " + .Version' | tee "$tmp_aur_packages_file")
+  elif [ "$1" == "offline" ]; then
+    new_aur_packages=$(cat "$tmp_aur_packages_file")
+  fi
+
+  aur_updates=$(join <(echo "$old_aur_packages") <(echo "$new_aur_packages") |
+    while read -r pkg a b; do
+      case "$(vercmp "$a" "$b")" in
+      -1) printf "%s %s -> %s\n" "$pkg" "$a" "$b" ;;
+      esac
+    done)
+
+  aur_updates_checksum=$(echo "$aur_updates" | sha256sum)
+  aur_updates_count=$(echo "$aur_updates" | grep -vc ^$)
+}
+
+function check_updates() {
+  if [ "$1" == "online" ]; then
+    check_pacman_updates online
+    check_aur_updates online
+  elif [ "$1" == "offline" ]; then
+    check_pacman_updates offline
+    check_aur_updates offline
+  fi
+
+  total_updates_count=$((pacman_updates_count + aur_updates_count))
+}
+
+function json() {
+  jq --unbuffered --null-input --compact-output \
+    --arg text "$1" \
+    --arg alt "$2" \
+    --arg tooltip "$3" \
+    --arg class "$4" \
+    '{"text": $text, "alt": $alt, "tooltip": $tooltip, "class": $class}'
+}
+
+# sync at the first start
+check_updates online
+pacman_updates_checksum=""
+aur_updates_checksum=""
+# count cycles to check updates using network sometime
+cycle=0
+
+# check updates every 6 seconds
+while true; do
+  previous_pacman_updates_checksum=$pacman_updates_checksum
+  previous_aur_updates_checksum=$aur_updates_checksum
+
+  if [ "$cycle" -ge 60 ]; then
+    check_updates online
+    cycle=0
+  else
+    check_updates offline
+    cycle=$((cycle + 1))
+  fi
+
+  if [ "$previous_pacman_updates_checksum" == "$pacman_updates_checksum" ] &&
+    [ "$previous_aur_updates_checksum" == "$aur_updates_checksum" ]; then
+    sleep 6
+    continue
+  fi
+
+  if [ "$pacman_updates_count" -gt 0 ]; then
+    template=$(ngettext "waybar-updates" "%d update available from pacman" "%d updates available from pacman" "%d")
+    # shellcheck disable=SC2059
+    notify-send -u normal -i software-update-available-symbolic "$(printf "$template" "$pacman_updates_count")" "$pacman_updates"
+  fi
+
+  if [ "$aur_updates_count" -gt 0 ]; then
+    template=$(ngettext "waybar-updates" "%d update available from AUR" "%d updates available from AUR" "$aur_updates_count")
+    # shellcheck disable=SC2059
+    notify-send -u normal -i software-update-available-symbolic "$(printf "$template" "$aur_updates_count")" "$aur_updates"
+  fi
+
+  if [ "$total_updates_count" -gt 0 ]; then
+    json $total_updates_count "pending-updates" "$pacman_updates$aur_updates" "pending-updates"
+  else
+    json "" "updated" "$(gettext "waybar-updates" "System is up to date")" "updated"
+  fi
+
+  sleep 6
+done

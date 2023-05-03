@@ -1,10 +1,12 @@
-# Waybar module to check Arch updates
+# waybar-updates
+
+Tiny Waybar module to check Arch Linux updates from official repositories and AUR.
 
 ## Features
 - Sends notifications about updates.
 - Supports GNU gettext localization (contribute new po-files!)
+- Checks updates from AUR using Aurweb RPC, so works independently.
 - Shows updates in the tooltip.
-- Checks updates from AUR using `yay`.
 - Supports two states: `pending-updates` and `updated` to use different icons or hide module.
 - Uses infinite loop to supply Waybar JSON updates.
 - Updates status every 6 seconds without using network.
@@ -13,6 +15,14 @@
 
 1. ~~Using AUR~~ WIP
 2. Manually by just copying script.
+
+## Dependencies
+
+- pacman-contrib
+- gettext
+- curl
+- jq
+- libnotify
 
 ## Usage
 
@@ -34,7 +44,8 @@
     "pending-updates": " ",
     "updated": ""
   },
-  "exec": "TEXTDOMAINDIR=\"$HOME/.config/waybar/scripts\" $HOME/.config/waybar/scripts/checkupdates.sh 2> /dev/null"
+  "exec-if": "which waybar-updates"
+  "exec": "waybar-updates"
 }
 ```
 
@@ -57,6 +68,21 @@
 	animation-duration: 3s;
 }
 ```
+
+You can copy compiled mo-files and use `TEXTDOMAINDIR="$HOME/.config/waybar/scripts"` in case you want
+to use localization and don't want to store them in `/usr/share/locale`.
+
+## Localization
+
+Supported languages:
+
+- English
+- Russian
+
+1. Open `po/waybar-updates.pot` in poedit or any alternative.
+2. Generate po-file for your language.
+3. Translate!
+4. Submit po-file by opening Pull Request!
 
 ---
 

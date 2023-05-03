@@ -1,8 +1,10 @@
 POFILES := $(wildcard po/*.po)
-MOFILES := $(patsubst po/%.po,po/build/locale/%/LC_MESSAGES/checkupdates.sh.mo,$(POFILES))
+MOFILES := $(patsubst po/%.po,po/build/locale/%/LC_MESSAGES/waybar-updates.mo,$(POFILES))
 
-all:: $(MOFILES)
+.PHONY: mo
 
-po/build/locale/%/LC_MESSAGES/checkupdates.sh.mo: po/%.po
+mo: $(MOFILES)
+
+po/build/locale/%/LC_MESSAGES/waybar-updates.mo: po/%.po
 	@mkdir -p po/build/locale/$*/LC_MESSAGES
 	msgfmt -o $@ $<
