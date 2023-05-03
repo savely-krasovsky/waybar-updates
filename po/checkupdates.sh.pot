@@ -1,0 +1,17 @@
+msgid ""
+msgstr ""
+
+msgid "%d update available from AUR"
+msgid_plural "%d updates available from AUR"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+msgid "%d update available from pacman"
+msgid_plural "%d updates available from pacman"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+msgid "System is up to date"
+msgstr ""
