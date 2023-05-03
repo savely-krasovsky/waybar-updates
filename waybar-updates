@@ -1,5 +1,39 @@
 #!/bin/bash
 
+usage() {
+  echo "Usage: waybar-updates [options]
+    -i, --interval  Interval between checks
+    -c, --cycles    Cycles between online checks (e.g. 6s * 600 cycles = 3600s = 1h between online checks)"
+  exit 2
+}
+
+interval=6
+cycles_number=600
+
+PARSED_ARGUMENTS=$(getopt -o "hi:c:" --long "help,interval,cycles" --name "waybar-updates" -- "$@")
+eval set -- "$PARSED_ARGUMENTS"
+while :; do
+  case "$1" in
+  -i | --interval)
+    interval="$2"
+    shift 2
+    ;;
+  -c | --cycles)
+    cycles_number="$2"
+    shift 2
+    ;;
+  -h | --help) usage ;;
+  --)
+    shift
+    break
+    ;;
+  *)
+    echo "Unexpected option: $1"
+    usage
+    ;;
+  esac
+done
+
 function check_pacman_updates() {
   if [ "$1" == "online" ]; then
     pacman_updates=$(checkupdates)
@@ -18,7 +52,7 @@ function check_aur_updates() {
     rm -f /tmp/tmp.*-waybar-updates
     tmp_aur_packages_file=$(mktemp --suffix -waybar-updates)
     # shellcheck disable=SC2046
-    new_aur_packages=$(curl -v "https://aur.archlinux.org/rpc?v=5&type=info$(printf '&arg[]=%s' $(echo "$old_aur_packages" | cut -f1 -d' '))" |
+    new_aur_packages=$(curl -s "https://aur.archlinux.org/rpc?v=5&type=info$(printf '&arg[]=%s' $(echo "$old_aur_packages" | cut -f1 -d' '))" |
       jq -r '.results[] | .Name + " " + .Version' | tee "$tmp_aur_packages_file")
   elif [ "$1" == "offline" ]; then
     new_aur_packages=$(cat "$tmp_aur_packages_file")
@@ -68,7 +102,7 @@ while true; do
   previous_pacman_updates_checksum=$pacman_updates_checksum
   previous_aur_updates_checksum=$aur_updates_checksum
 
-  if [ "$cycle" -ge 60 ]; then
+  if [ "$cycle" -ge "$cycles_number" ]; then
     check_updates online
     cycle=0
   else
@@ -78,7 +112,7 @@ while true; do
 
   if [ "$previous_pacman_updates_checksum" == "$pacman_updates_checksum" ] &&
     [ "$previous_aur_updates_checksum" == "$aur_updates_checksum" ]; then
-    sleep 6
+    sleep "$interval"
     continue
   fi
 
@@ -100,5 +134,5 @@ while true; do
     json "" "updated" "$(gettext "waybar-updates" "System is up to date")" "updated"
   fi
 
-  sleep 6
+  sleep "$interval"
 done

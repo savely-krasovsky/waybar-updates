@@ -9,7 +9,7 @@ Tiny Waybar module to check Arch Linux updates from official repositories and AU
 - Shows updates in the tooltip.
 - Supports two states: `pending-updates` and `updated` to use different icons or hide module.
 - Uses infinite loop to supply Waybar JSON updates.
-- Updates status every 6 seconds without using network.
+- Configurable interval between checks.
 
 ## Installation
 
