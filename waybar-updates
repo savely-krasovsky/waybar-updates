@@ -18,7 +18,7 @@ function check_aur_updates() {
     rm -f /tmp/tmp.*-waybar-updates
     tmp_aur_packages_file=$(mktemp --suffix -waybar-updates)
     # shellcheck disable=SC2046
-    new_aur_packages=$(curl -s "https://aur.archlinux.org/rpc?v=5&type=info$(printf '&arg[]=%s' $(echo "$old_aur_packages" | cut -f1 -d' '))" |
+    new_aur_packages=$(curl -v "https://aur.archlinux.org/rpc?v=5&type=info$(printf '&arg[]=%s' $(echo "$old_aur_packages" | cut -f1 -d' '))" |
       jq -r '.results[] | .Name + " " + .Version' | tee "$tmp_aur_packages_file")
   elif [ "$1" == "offline" ]; then
     new_aur_packages=$(cat "$tmp_aur_packages_file")
@@ -83,7 +83,7 @@ while true; do
   fi
 
   if [ "$pacman_updates_count" -gt 0 ]; then
-    template=$(ngettext "waybar-updates" "%d update available from pacman" "%d updates available from pacman" "%d")
+    template=$(ngettext "waybar-updates" "%d update available from pacman" "%d updates available from pacman" "$pacman_updates_count")
     # shellcheck disable=SC2059
     notify-send -u normal -i software-update-available-symbolic "$(printf "$template" "$pacman_updates_count")" "$pacman_updates"
   fi
