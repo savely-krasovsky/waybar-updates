@@ -13,8 +13,8 @@ Tiny Waybar module to check Arch Linux updates from official repositories and AU
 
 ## Installation
 
-1. ~~Using AUR~~ WIP
-2. Manually by just copying script.
+1. Using AUR package `waybar-updates`.
+2. Manually by using `make && make install`.
 
 ## Dependencies
 
