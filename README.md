@@ -44,7 +44,7 @@ Tiny Waybar module to check Arch Linux updates from official repositories and AU
     "pending-updates": " ",
     "updated": ""
   },
-  "exec-if": "which waybar-updates"
+  "exec-if": "which waybar-updates",
   "exec": "waybar-updates"
 }
 ```
@@ -71,6 +71,13 @@ Tiny Waybar module to check Arch Linux updates from official repositories and AU
 
 You can copy compiled mo-files and use `TEXTDOMAINDIR="$HOME/.config/waybar/scripts"` in case you want
 to use localization and don't want to store them in `/usr/share/locale`.
+
+### Command-line options
+The following options are available:
+- `-i, --interval`: Interval between checks (default: 6 seconds)
+- `-c, --cycles`: Cycles between online checks (e.g. 6s * 600 cycles = 3600s = 1h between online checks) (default: 600 cycles)
+- `-l, --packages-limit`: Maximum number of notification to be shown in notifications and tooltip (default: 10)
+
 
 ## Localization
 
