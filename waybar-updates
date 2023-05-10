@@ -96,12 +96,20 @@ function json() {
     '{"text": $text, "alt": $alt, "tooltip": $tooltip, "class": $class}'
 }
 
+function cleanup() {
+  echo "Cleaning up..."
+  rm -f "$tmp_aur_packages_file"
+  exit 0
+}
+
 # sync at the first start
 check_updates online
 pacman_updates_checksum=""
 aur_updates_checksum=""
 # count cycles to check updates using network sometime
 cycle=0
+
+trap cleanup SIGINT SIGTERM
 
 # check updates every 6 seconds
 while true; do
