@@ -55,7 +55,7 @@ function check_aur_updates() {
   old_aur_packages=$(pacman -Qm)
 
   if [ "$1" == "online" ]; then
-    rm -f /tmp/tmp.*-waybar-updates
+    rm -f "$tmp_aur_packages_file"
     tmp_aur_packages_file=$(mktemp --suffix -waybar-updates)
     # shellcheck disable=SC2046
     new_aur_packages=$(curl -s "https://aur.archlinux.org/rpc?v=5&type=info$(printf '&arg[]=%s' $(echo "$old_aur_packages" | cut -f1 -d' '))" |
