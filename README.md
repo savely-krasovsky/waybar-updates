@@ -76,7 +76,7 @@ to use localization and don't want to store them in `/usr/share/locale`.
 The following options are available:
 - `-i, --interval`: Interval between checks (default: 6 seconds)
 - `-c, --cycles`: Cycles between online checks (e.g. 6s * 600 cycles = 3600s = 1h between online checks) (default: 600 cycles)
-- `-l, --packages-limit`: Maximum number of notification to be shown in notifications and tooltip (default: 10)
+- `-l, --packages-limit`: Maximum number of packages to be shown in notifications and tooltip (default: 10)
 
 
 ## Localization
@@ -85,6 +85,7 @@ Supported languages:
 
 - English
 - Russian
+- French
 
 1. Open `po/waybar-updates.pot` in poedit or any alternative.
 2. Generate po-file for your language.

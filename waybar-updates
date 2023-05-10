@@ -4,7 +4,7 @@ usage() {
   echo "Usage: waybar-updates [options]
     -i, --interval        Interval between checks
     -c, --cycles          Cycles between online checks (e.g. 6s * 600 cycles = 3600s = 1h between online checks)
-    -l, --packages-limit  Maximum number of notification to be shown in notifications and tooltip"
+    -l, --packages-limit  Maximum number of packages to be shown in notifications and tooltip"
   exit 2
 }
 
