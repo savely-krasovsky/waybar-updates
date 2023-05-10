@@ -59,7 +59,7 @@ function check_aur_updates() {
     tmp_aur_packages_file=$(mktemp --suffix -waybar-updates)
     # shellcheck disable=SC2046
     new_aur_packages=$(curl -s "https://aur.archlinux.org/rpc?v=5&type=info$(printf '&arg[]=%s' $(echo "$old_aur_packages" | cut -f1 -d' '))" |
-      jq -r '.results[] | .Name + " " + .Version' | tee "$tmp_aur_packages_file")
+      jq -r '.results[] | .Name + " " + .Version' | tee "$tmp_aur_packages_file"
   elif [ "$1" == "offline" ]; then
     new_aur_packages=$(cat "$tmp_aur_packages_file")
   fi
