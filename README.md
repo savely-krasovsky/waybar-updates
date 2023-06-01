@@ -86,6 +86,7 @@ Supported languages:
 - English
 - Russian
 - French
+- Turkish
 
 1. Open `po/waybar-updates.pot` in poedit or any alternative.
 2. Generate po-file for your language.
