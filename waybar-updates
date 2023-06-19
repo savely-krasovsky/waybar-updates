@@ -146,7 +146,7 @@ while true; do
   fi
 
   if [ "$total_updates_count" -gt 0 ]; then
-    json $total_updates_count "pending-updates" "$(echo "$pacman_updates$aur_updates" | head -n "$packages_limit")" "pending-updates"
+    json $total_updates_count "pending-updates" "$(echo "$pacman_updates\n$aur_updates" | head -n "$packages_limit")" "pending-updates"
   else
     json "" "updated" "$(gettext "waybar-updates" "System is up to date")" "updated"
   fi
