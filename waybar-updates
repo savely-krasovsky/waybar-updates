@@ -130,23 +130,34 @@ while true; do
     continue
   fi
 
-  # send pushes, limit the body by 10 packages
+  # send pushes, limit the body by 10 packages;
+  # also create message that will be used as tooltip
+  tooltip=""
   if [ "$pacman_updates_count" -gt 0 ]; then
     template=$(ngettext "waybar-updates" "%d update available from pacman" "%d updates available from pacman" "$pacman_updates_count")
     # shellcheck disable=SC2059
     notify-send -u normal -i software-update-available-symbolic \
       "$(printf "$template" "$pacman_updates_count")" \
       "$(echo "$pacman_updates" | head -n "$packages_limit")"
-  elif [ "$aur_updates_count" -gt 0 ]; then
+
+    tooltip+="$pacman_updates"
+  fi
+  if [ "$aur_updates_count" -gt 0 ]; then
     template=$(ngettext "waybar-updates" "%d update available from AUR" "%d updates available from AUR" "$aur_updates_count")
     # shellcheck disable=SC2059
     notify-send -u normal -i software-update-available-symbolic \
       "$(printf "$template" "$aur_updates_count")" \
       "$(echo "$aur_updates" | head -n "$packages_limit")"
+
+    if [ -z "$tooltip" ]; then
+      tooltip+="$aur_updates"
+    else
+      tooltip+="\n$aur_updates"
+    fi
   fi
 
   if [ "$total_updates_count" -gt 0 ]; then
-    json $total_updates_count "pending-updates" "$(echo -e "$pacman_updates\n$aur_updates" | head -n "$packages_limit")" "pending-updates"
+    json $total_updates_count "pending-updates" "$(echo -e "$tooltip" | head -n "$packages_limit")" "pending-updates"
   else
     json "" "updated" "$(gettext "waybar-updates" "System is up to date")" "updated"
   fi
