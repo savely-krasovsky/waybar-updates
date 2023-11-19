@@ -41,12 +41,10 @@ while :; do
 done
 
 function check_pacman_updates() {
-  ignored_packages=$(pacman-conf IgnorePkg)
-
   if [ "$1" == "online" ]; then
-    pacman_updates=$(checkupdates | grep -vF "$ignored_packages")
+    pacman_updates=$(checkupdates)
   elif [ "$1" == "offline" ]; then
-    pacman_updates=$(checkupdates --nosync | grep -vF "$ignored_packages")
+    pacman_updates=$(checkupdates --nosync)
   fi
 
   pacman_updates_checksum=$(echo "$pacman_updates" | sha256sum)
@@ -55,7 +53,11 @@ function check_pacman_updates() {
 
 function check_aur_updates() {
   ignored_packages=$(pacman-conf IgnorePkg)
-  old_aur_packages=$(pacman -Qm | grep -vF "$ignored_packages")
+  if [ -n "$ignored_packages" ]; then
+      old_aur_packages=$(pacman -Qm | grep -vF "$ignored_packages")
+  else
+      old_aur_packages=$(pacman -Qm)
+  fi
 
   if [ "$1" == "online" ]; then
     rm -f "$tmp_aur_packages_file"
