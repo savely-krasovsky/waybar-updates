@@ -69,7 +69,7 @@ function check_aur_updates() {
     new_aur_packages=$(cat "$tmp_aur_packages_file")
   fi
 
-  aur_updates=$(join <(echo "$old_aur_packages") <(echo "$new_aur_packages") |
+  aur_updates=$(LC_ALL=C join <(echo "$old_aur_packages") <(echo "$new_aur_packages") |
     while read -r pkg a b; do
       case "$(vercmp "$a" "$b")" in
       -1) printf "%s %s -> %s\n" "$pkg" "$a" "$b" ;;
