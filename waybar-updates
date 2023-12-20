@@ -4,15 +4,18 @@ usage() {
   echo "Usage: waybar-updates [options]
     -i, --interval        Interval between checks
     -c, --cycles          Cycles between online checks (e.g. 6s * 600 cycles = 3600s = 1h between online checks)
-    -l, --packages-limit  Maximum number of packages to be shown in notifications and tooltip"
+    -l, --packages-limit  Maximum number of packages to be shown in notifications and tooltip
+    -d, --devel           Enable devel checks"
   exit 2
 }
 
 interval=6
 cycles_number=600
 packages_limit=10
+devel=false
+aurhelper=paru
 
-PARSED_ARGUMENTS=$(getopt -o "hi:c:l:" --long "help,interval,cycles,packages-limit" --name "waybar-updates" -- "$@")
+PARSED_ARGUMENTS=$(getopt -o "hi:c:l:d::" --long "help,interval,cycles,packages-limit,devel::" --name "waybar-updates" -- "$@")
 eval set -- "$PARSED_ARGUMENTS"
 while :; do
   case "$1" in
@@ -26,6 +29,10 @@ while :; do
     ;;
   -l | --packages-limit)
     packages_limit="$2"
+    shift 2
+    ;;
+  -d | --devel)
+    devel=true
     shift 2
     ;;
   -h | --help) usage ;;
@@ -51,6 +58,23 @@ function check_pacman_updates() {
   pacman_updates_count=$(echo "$pacman_updates" | grep -vc ^$)
 }
 
+function check_devel_updates() {
+  ignored_packages=$(pacman-conf IgnorePkg)
+  if [ "$1" == "online" ]; then
+    rm -f "$tmp_devel_updates_file"
+    tmp_devel_updates_file=$(mktemp --suffix -waybar-updates)
+    if [ -n "$ignored_packages" ]; then
+        devel_updates=$($aurhelper -Qua | grep git | grep -vF "$ignored_packages" | tee "$tmp_devel_updates_file")
+    else
+        devel_updates=$($aurhelper -Qua | grep git | tee "$tmp_devel_updates_file")
+    fi
+  elif [ "$1" == "offline" ]; then
+    devel_updates=$(cat "$tmp_devel_updates_file")
+  fi
+  devel_updates_checksum=$(echo "$devel_updates" | sha256sum)
+  devel_updates_count=$(echo "$devel_updates" | grep -vc ^$)
+}
+
 function check_aur_updates() {
   ignored_packages=$(pacman-conf IgnorePkg)
   if [ -n "$ignored_packages" ]; then
@@ -70,7 +94,7 @@ function check_aur_updates() {
   fi
 
   aur_updates=$(LC_ALL=C join <(echo "$old_aur_packages") <(echo "$new_aur_packages") |
-    while read -r pkg a b; do
+    while LC_ALL=C read -r pkg a b; do
       case "$(vercmp "$a" "$b")" in
       -1) printf "%s %s -> %s\n" "$pkg" "$a" "$b" ;;
       esac
@@ -84,12 +108,18 @@ function check_updates() {
   if [ "$1" == "online" ]; then
     check_pacman_updates online
     check_aur_updates online
+    if [ $devel = true ];then check_devel_updates online; fi
   elif [ "$1" == "offline" ]; then
+    #exit
     check_pacman_updates offline
     check_aur_updates offline
+    if [ $devel = true ];then check_devel_updates offline; fi
   fi
-
-  total_updates_count=$((pacman_updates_count + aur_updates_count))
+  if [ $devel = true ];then
+    total_updates_count=$((pacman_updates_count + aur_updates_count + devel_updates_count))
+  else
+    total_updates_count=$((pacman_updates_count + aur_updates_count))
+  fi
 }
 
 function json() {
@@ -111,6 +141,7 @@ function cleanup() {
 check_updates online
 pacman_updates_checksum=""
 aur_updates_checksum=""
+devel_updates_checksum=""
 # count cycles to check updates using network sometime
 cycle=0
 
@@ -120,6 +151,7 @@ trap cleanup SIGINT SIGTERM
 while true; do
   previous_pacman_updates_checksum=$pacman_updates_checksum
   previous_aur_updates_checksum=$aur_updates_checksum
+  if [ $devel = true ];then previous_devel_updates_checksum=$devel_updates_checksum; fi
 
   if [ "$cycle" -ge "$cycles_number" ]; then
     check_updates online
@@ -128,11 +160,19 @@ while true; do
     check_updates offline
     cycle=$((cycle + 1))
   fi
-
-  if [ "$previous_pacman_updates_checksum" == "$pacman_updates_checksum" ] &&
-    [ "$previous_aur_updates_checksum" == "$aur_updates_checksum" ]; then
-    sleep "$interval"
-    continue
+  if [ $devel = true ];then
+    if [ "$previous_pacman_updates_checksum" == "$pacman_updates_checksum" ] &&
+      [ "$previous_aur_updates_checksum" == "$aur_updates_checksum" ] &&
+      [ "$previous_devel_updates_checksum" == "$devel_updates_checksum" ]; then
+      sleep "$interval"
+      continue
+    fi
+  else
+    if [ "$previous_pacman_updates_checksum" == "$pacman_updates_checksum" ] &&
+      [ "$previous_aur_updates_checksum" == "$aur_updates_checksum" ]; then
+      sleep "$interval"
+      continue
+    fi
   fi
 
   # send pushes, limit the body by 10 packages;
@@ -158,6 +198,19 @@ while true; do
       tooltip+="$aur_updates"
     else
       tooltip+="\n$aur_updates"
+    fi
+  fi
+  if [ "$devel_updates_count" -gt 0 ]; then
+    template=$(ngettext "waybar-updates" "%d update available from DEVEL" "%d updates available from DEVEL" "$devel_updates_count")
+    # shellcheck disable=SC2059
+    notify-send -u normal -i software-update-available-symbolic \
+      "$(printf "$template" "$devel_updates_count")" \
+      "$(echo "$devel_updates" | head -n "$packages_limit")"
+
+    if [ -z "$tooltip" ]; then
+      tooltip+="$devel_updates"
+    else
+      tooltip+="\n$devel_updates"
     fi
   fi
 
