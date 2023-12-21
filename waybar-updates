@@ -14,6 +14,7 @@ cycles_number=600
 packages_limit=10
 devel=false
 aurhelper=paru
+develsuffixes="git|cvs|svn|bzr|darcs|always|hg|fossil"
 
 PARSED_ARGUMENTS=$(getopt -o "hi:c:l:d::" --long "help,interval,cycles,packages-limit,devel::" --name "waybar-updates" -- "$@")
 eval set -- "$PARSED_ARGUMENTS"
@@ -64,9 +65,9 @@ function check_devel_updates() {
     rm -f "$tmp_devel_updates_file"
     tmp_devel_updates_file=$(mktemp --suffix -waybar-updates)
     if [ -n "$ignored_packages" ]; then
-        devel_updates=$($aurhelper -Qua | grep git | grep -vF "$ignored_packages" | tee "$tmp_devel_updates_file")
+        devel_updates=$($aurhelper -Qua | grep -Ee "($develsuffixes)\s" | grep -vF "$ignored_packages" | tee "$tmp_devel_updates_file")
     else
-        devel_updates=$($aurhelper -Qua | grep git | tee "$tmp_devel_updates_file")
+        devel_updates=$($aurhelper -Qua | grep -Ee "($develsuffixes)\s" | tee "$tmp_devel_updates_file")
     fi
   elif [ "$1" == "offline" ]; then
     devel_updates=$(cat "$tmp_devel_updates_file")
@@ -200,20 +201,21 @@ while true; do
       tooltip+="\n$aur_updates"
     fi
   fi
-  if [ "$devel_updates_count" -gt 0 ]; then
-    template=$(ngettext "waybar-updates" "%d update available from Devel" "%d updates available from Devel" "$devel_updates_count")
-    # shellcheck disable=SC2059
-    notify-send -u normal -i software-update-available-symbolic \
-      "$(printf "$template" "$devel_updates_count")" \
-      "$(echo "$devel_updates" | head -n "$packages_limit")"
+  if [ $devel = true ];then
+    if [ "$devel_updates_count" -gt 0 ]; then
+      template=$(ngettext "waybar-updates" "%d update available from Devel" "%d updates available from Devel" "$devel_updates_count")
+      # shellcheck disable=SC2059
+      notify-send -u normal -i software-update-available-symbolic \
+        "$(printf "$template" "$devel_updates_count")" \
+        "$(echo "$devel_updates" | head -n "$packages_limit")"
 
-    if [ -z "$tooltip" ]; then
-      tooltip+="$devel_updates"
-    else
-      tooltip+="\n$devel_updates"
+      if [ -z "$tooltip" ]; then
+        tooltip+="$devel_updates"
+      else
+        tooltip+="\n$devel_updates"
+      fi
     fi
   fi
-
   if [ "$total_updates_count" -gt 0 ]; then
     json $total_updates_count "pending-updates" "$(echo -e "$tooltip" | head -n "$packages_limit")" "pending-updates"
   else
