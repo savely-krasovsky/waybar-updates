@@ -162,18 +162,20 @@ while true; do
     cycle=$((cycle + 1))
   fi
   if [ $devel = true ];then
-    if [ "$previous_pacman_updates_checksum" == "$pacman_updates_checksum" ] &&
+    condition (){
+      [ "$previous_pacman_updates_checksum" == "$pacman_updates_checksum" ] &&
       [ "$previous_aur_updates_checksum" == "$aur_updates_checksum" ] &&
-      [ "$previous_devel_updates_checksum" == "$devel_updates_checksum" ]; then
-      sleep "$interval"
-      continue
-    fi
+      [ "$previous_devel_updates_checksum" == "$devel_updates_checksum" ]
+    }
   else
-    if [ "$previous_pacman_updates_checksum" == "$pacman_updates_checksum" ] &&
-      [ "$previous_aur_updates_checksum" == "$aur_updates_checksum" ]; then
-      sleep "$interval"
-      continue
-    fi
+    condition (){
+      [ "$previous_pacman_updates_checksum" == "$pacman_updates_checksum" ] &&
+      [ "$previous_aur_updates_checksum" == "$aur_updates_checksum" ]
+    }
+  fi
+  if condition; then
+    sleep "$interval"
+    continue
   fi
 
   # send pushes, limit the body by 10 packages;
