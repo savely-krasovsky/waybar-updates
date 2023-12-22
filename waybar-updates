@@ -109,14 +109,14 @@ function check_updates() {
   if [ "$1" == "online" ]; then
     check_pacman_updates online
     check_aur_updates online
-    if [ $devel = true ];then check_devel_updates online; fi
+    if [ $devel == true ];then check_devel_updates online; fi
   elif [ "$1" == "offline" ]; then
     #exit
     check_pacman_updates offline
     check_aur_updates offline
-    if [ $devel = true ];then check_devel_updates offline; fi
+    if [ $devel == true ];then check_devel_updates offline; fi
   fi
-  if [ $devel = true ];then
+  if [ $devel == true ];then
     total_updates_count=$((pacman_updates_count + aur_updates_count + devel_updates_count))
   else
     total_updates_count=$((pacman_updates_count + aur_updates_count))
@@ -153,7 +153,7 @@ trap cleanup SIGINT SIGTERM
 while true; do
   previous_pacman_updates_checksum=$pacman_updates_checksum
   previous_aur_updates_checksum=$aur_updates_checksum
-  if [ $devel = true ];then previous_devel_updates_checksum=$devel_updates_checksum; fi
+  if [ $devel == true ];then previous_devel_updates_checksum=$devel_updates_checksum; fi
 
   if [ "$cycle" -ge "$cycles_number" ]; then
     check_updates online
@@ -162,7 +162,7 @@ while true; do
     check_updates offline
     cycle=$((cycle + 1))
   fi
-  if [ $devel = true ];then
+  if [ $devel == true ];then
     condition (){
       { [ "$previous_pacman_updates_checksum" == "$pacman_updates_checksum" ] &&
       [ "$previous_aur_updates_checksum" == "$aur_updates_checksum" ] &&
@@ -204,7 +204,7 @@ while true; do
       tooltip+="\n$aur_updates"
     fi
   fi
-  if [ $devel = true ];then
+  if [ $devel == true ];then
     if [ "$devel_updates_count" -gt 0 ]; then
       template=$(ngettext "waybar-updates" "%d update available from Devel" "%d updates available from Devel" "$devel_updates_count")
       # shellcheck disable=SC2059
