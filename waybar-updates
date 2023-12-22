@@ -164,17 +164,14 @@ while true; do
   fi
   if [ $devel = true ];then
     condition (){
-      [ -e /var/lib/pacman/db.lck ] ||
-      [ $(pgrep -x "$aurhelper" > /dev/null) ] ||
-      [ "$previous_pacman_updates_checksum" == "$pacman_updates_checksum" ] &&
+      { [ "$previous_pacman_updates_checksum" == "$pacman_updates_checksum" ] &&
       [ "$previous_aur_updates_checksum" == "$aur_updates_checksum" ] &&
-      [ "$previous_devel_updates_checksum" == "$devel_updates_checksum" ]
+      [ "$previous_devel_updates_checksum" == "$devel_updates_checksum" ] ;}
     }
   else
     condition (){
-      [ -e /var/lib/pacman/db.lck ] ||
-      [ "$previous_pacman_updates_checksum" == "$pacman_updates_checksum" ] &&
-      [ "$previous_aur_updates_checksum" == "$aur_updates_checksum" ]
+      { [ "$previous_pacman_updates_checksum" == "$pacman_updates_checksum" ] &&
+      [ "$previous_aur_updates_checksum" == "$aur_updates_checksum" ] ;}
     }
   fi
   if condition; then
