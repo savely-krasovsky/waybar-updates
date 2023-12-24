@@ -12,6 +12,11 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Generator: Poedit 3.3.1\n"
 
+msgid "%d update available from Devel"
+msgid_plural "%d updates available from Devel"
+msgstr[0] "Devel'dan %d güncelleme mevcut"
+msgstr[1] "Devel'dan %d güncelleme mevcut"
+
 # In Turkish, the plural suffix is not used if the number of the mentioned entity is specified. That's why singular and plural translations are the same.
 msgid "%d update available from AUR"
 msgid_plural "%d updates available from AUR"
