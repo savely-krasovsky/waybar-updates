@@ -76,8 +76,10 @@ function check_devel_updates() {
 
     develpackages=$(LC_ALL=C join <(echo "$old_devel_packages") <(echo "$new_devel_packages"))
 
-    build_devel_list "$tmp_devel_packages_file" "$develpackages"
-    # build_devel_list "$tmp_devel_packages_file"
+    if [[ $(echo "$develpackages" | grep -vc ^$) -ne 0 ]]; then
+      develpackages=$(awk {'printf ("%s %s\n", $1, $3)'} <<< "$develpackages")
+      build_devel_list "$tmp_devel_packages_file" "$develpackages"
+    fi
     devel_updates=$(cat "$tmp_devel_packages_file")
   fi
   devel_updates_checksum=$(echo "$devel_updates" | sha256sum)
@@ -87,7 +89,7 @@ function check_devel_updates() {
 function build_devel_list() {
   custom_pkgbuild_vars="_gitname=\|_githubuser=\|_githubrepo=\|_gitcommit=\|url=\|_pkgname=\|_gitdir=\|_repo_name=\|_gitpkgname=\|source_dir="
 
-  rm -f "$tmp_devel_packages_file"
+  echo > "$tmp_devel_packages_file"
 
   i=0
   while read -r pkgname version
