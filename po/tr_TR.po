@@ -14,7 +14,7 @@ msgstr ""
 
 msgid "%d devel-update available from AUR"
 msgid_plural "%d devel-updates available from AUR"
-msgstr[0] "AUR'dan %d geliştirme-güncelleme mevcut"
+msgstr[0] "AUR'dan %d devel-güncellemesi mevcut"
 msgstr[1] "AUR'dan %d devel-güncellemesi mevcut"
 
 # In Turkish, the plural suffix is not used if the number of the mentioned entity is specified. That's why singular and plural translations are the same.
