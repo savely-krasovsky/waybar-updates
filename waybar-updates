@@ -62,26 +62,25 @@ function check_devel_updates() {
   if [ "$1" == "online" ]; then
     develsuffixes="git"
     develpackages=$(pacman -Qm | grep -Ee "$develsuffixes")
+    if [ -n "$ignored_packages" ]; then
+        develpackages=$(grep -vF "$ignored_packages" <<< "$develpackages")
+    fi
     rm -f "$tmp_devel_packages_file"
     tmp_devel_packages_file=$(mktemp --suffix -waybar-updates)
-    build_devel_list "$tmp_devel_packages_file" "$develpackages"
-    if [ -n "$ignored_packages" ]; then
-        devel_updates=$(grep -vF "$ignored_packages" < "$tmp_devel_packages_file")
-    else
-        devel_updates=$(cat "$tmp_devel_packages_file")
-    fi
+    build_devel_list "$develpackages" "online"
   elif [ "$1" == "offline" ]; then
     new_devel_packages=$(pacman -Qm | grep -Ee "$develsuffixes")
-    old_devel_packages=$(awk {'printf ("%s %s\n", $1, $2)'} "$tmp_devel_packages_file")
+    old_devel_packages=$(awk {'printf ("%s %s\n", $1, $3)'} "$tmp_devel_packages_file")
 
     develpackages=$(LC_ALL=C join <(echo "$old_devel_packages") <(echo "$new_devel_packages"))
+    echo "d:$develpackages"
 
     if [[ $(echo "$develpackages" | grep -vc ^$) -ne 0 ]]; then
-      develpackages=$(awk {'printf ("%s %s\n", $1, $3)'} <<< "$develpackages")
-      build_devel_list "$tmp_devel_packages_file" "$develpackages"
+      develpackages=$(awk {'printf ("%s %s %s\n", $1, $3, $2)'} <<< "$develpackages")
+      build_devel_list "$develpackages" "offline"
     fi
-    devel_updates=$(cat "$tmp_devel_packages_file")
   fi
+  devel_updates=$(awk {'printf ("%s %s\n", $1, $2)'} "$tmp_devel_packages_file")
   devel_updates_checksum=$(echo "$devel_updates" | sha256sum)
   devel_updates_count=$(echo "$devel_updates" | grep -vc ^$)
 }
@@ -89,21 +88,23 @@ function check_devel_updates() {
 function build_devel_list() {
   custom_pkgbuild_vars="_gitname=\|_githubuser=\|_githubrepo=\|_gitcommit=\|url=\|_pkgname=\|_gitdir=\|_repo_name=\|_gitpkgname=\|source_dir="
 
-  echo > "$tmp_devel_packages_file"
+  truncate -s 0 "$tmp_devel_packages_file"
 
   i=0
-  while read -r pkgname version
+  while read -r pkgname version source
   do
     (( i++ ))
-    eval $(curl -s "https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=$pkgname" | grep "$custom_pkgbuild_vars")
-    eval source=$(curl -s "https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=$pkgname" | grep -zPo '(?s)source=\(.*?\)' |  awk '/git/{print "source="$1}' | sed 's/source=//g' | sed '/http/p' | sed 's/(//;s/)//g' | tr -d '\0' | head -1)
-    source=$(sed 's/^\(.*\)\(http.*$\)/\2/;s/\"//;s/'\''//' <<< "$source")
-    source=$(cut -f1 -d"#" <<< "$source")
+    if [ -z "$source" ]; then
+      eval $(curl -s "https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=$pkgname" | grep "$custom_pkgbuild_vars")
+      eval source=$(curl -s "https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=$pkgname" | grep -zPo '(?s)source=\(.*?\)' |  awk '/git/{print "source="$1}' | sed 's/source=//g' | sed '/http/p' | sed 's/(//;s/)//g' | tr -d '\0' | head -1)
+      source=$(sed 's/^\(.*\)\(http.*$\)/\2/;s/\"//;s/'\''//' <<< "$source")
+      source=$(cut -f1 -d"#" <<< "$source")
+    fi
     lastcommit=$(git ls-remote --heads "$source" | awk '{ print $1}' | cut -c1-7)
     if ! echo "$version" | grep -q "$lastcommit"; then
-      echo "$pkgname $version -> latest-commit" >> "$1"
+      echo "$pkgname $version $source ${lastcommit//$'\n'/ }" >> "$tmp_devel_packages_file"
     fi
-  done <<< "$2"
+  done <<< "$1"
 }
 
 function check_aur_updates() {
