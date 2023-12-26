@@ -81,7 +81,7 @@ The following options are available:
 - `-i, --interval`: Interval between checks (default: 6 seconds)
 - `-c, --cycles`: Cycles between online checks (e.g. 6s * 600 cycles = 3600s = 1h between online checks) (default: 600 cycles)
 - `-l, --packages-limit`: Maximum number of packages to be shown in notifications and tooltip (default: 10)
-- -d, --devel: Also check for development packages upstream changes (default:disabled)
+- `-d, --devel`: Also check for development packages upstream changes (default:disabled)
 
 
 ## Localization
