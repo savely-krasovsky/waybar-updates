@@ -215,7 +215,7 @@ while true; do
   if [ "$pacman_updates_count" -gt 0 ]; then
     template=$(ngettext "waybar-updates" "%d update available from pacman" "%d updates available from pacman" "$pacman_updates_count")
     # shellcheck disable=SC2059
-    notify-send -u normal -i software-update-available-symbolic \
+    notify-send -a waybar-updates -u normal -i software-update-available-symbolic \
       "$(printf "$template" "$pacman_updates_count")" \
       "$(echo "$pacman_updates" | head -n "$packages_limit")"
 
@@ -224,7 +224,7 @@ while true; do
   if [ "$aur_updates_count" -gt 0 ]; then
     template=$(ngettext "waybar-updates" "%d update available from AUR" "%d updates available from AUR" "$aur_updates_count")
     # shellcheck disable=SC2059
-    notify-send -u normal -i software-update-available-symbolic \
+    notify-send -a waybar-updates -u normal -i software-update-available-symbolic \
       "$(printf "$template" "$aur_updates_count")" \
       "$(echo "$aur_updates" | head -n "$packages_limit")"
 
@@ -238,7 +238,7 @@ while true; do
     if [ "$devel_updates_count" -gt 0 ]; then
       template=$(ngettext "waybar-updates" "%d update available from Devel" "%d updates available from Devel" "$devel_updates_count")
       # shellcheck disable=SC2059
-      notify-send -u normal -i software-update-available-symbolic \
+      notify-send -a waybar-updates -u normal -i software-update-available-symbolic \
         "$(printf "$template" "$devel_updates_count")" \
         "$(echo "$devel_updates" | head -n "$packages_limit")"
 
