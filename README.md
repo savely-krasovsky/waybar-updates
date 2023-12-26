@@ -1,5 +1,7 @@
 # waybar-updates
 
+[![ShellCheck](https://github.com/L11R/waybar-updates/actions/workflows/shellcheck.yml/badge.svg)](https://github.com/L11R/waybar-updates/actions/workflows/shellcheck.yml)
+
 Tiny Waybar module to check Arch Linux updates from official repositories and AUR.
 
 ## Features
