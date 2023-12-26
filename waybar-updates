@@ -86,7 +86,7 @@ function check_devel_updates() {
 }
 
 function build_devel_list() {
-  custom_pkgbuild_vars="_gitname=\|_githubuser=\|_githubrepo=\|_gitcommit=\|url=\|_pkgname=\|_gitdir=\|_repo_name=\|_gitpkgname=\|source_dir="
+  custom_pkgbuild_vars="_gitname=\|_githubuser=\|_githubrepo=\|_gitcommit=\|url=\|_pkgname=\|_gitdir=\|_repo_name=\|_gitpkgname=\|source_dir=\|_name="
 
   truncate -s 0 "$tmp_devel_packages_file"
 
