@@ -12,6 +12,11 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 "X-Generator: Poedit 3.2.2\n"
 
+msgid "%d devel-update available from AUR"
+msgid_plural "%d devel-updates available from AUR"
+msgstr[0] "%d mise à jour devel disponible via AUR"
+msgstr[1] "%d mises à jour devel disponibles via AUR"
+
 msgid "%d update available from AUR"
 msgid_plural "%d updates available from AUR"
 msgstr[0] "%d mise à jour disponible via AUR"
