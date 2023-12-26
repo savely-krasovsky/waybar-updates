@@ -70,17 +70,17 @@ function check_devel_updates() {
     build_devel_list "$develpackages" "online"
   elif [ "$1" == "offline" ]; then
     new_devel_packages=$(pacman -Qm | grep -Ee "$develsuffixes")
-    old_devel_packages=$(awk {'printf ("%s %s\n", $1, $3)'} "$tmp_devel_packages_file")
+    old_devel_packages=$(awk '{printf ("%s %s\n", $1, $3)}' "$tmp_devel_packages_file")
 
     develpackages=$(LC_ALL=C join <(echo "$old_devel_packages") <(echo "$new_devel_packages"))
     echo "d:$develpackages"
 
     if [[ $(echo "$develpackages" | grep -vc ^$) -ne 0 ]]; then
-      develpackages=$(awk {'printf ("%s %s %s\n", $1, $3, $2)'} <<< "$develpackages")
+      develpackages=$(awk '{printf ("%s %s %s\n", $1, $3, $2)}' <<< "$develpackages")
       build_devel_list "$develpackages" "offline"
     fi
   fi
-  devel_updates=$(awk {'printf ("%s %s\n", $1, $2)'} "$tmp_devel_packages_file")
+  devel_updates=$(awk '{printf ("%s %s\n", $1, $2)}' "$tmp_devel_packages_file")
   devel_updates_checksum=$(echo "$devel_updates" | sha256sum)
   devel_updates_count=$(echo "$devel_updates" | grep -vc ^$)
 }
@@ -95,8 +95,12 @@ function build_devel_list() {
   do
     (( i++ ))
     if [ -z "$source" ]; then
-      eval $(curl -s "https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=$pkgname" | grep "$custom_pkgbuild_vars")
-      eval source=$(curl -s "https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=$pkgname" | grep -zPo '(?s)source=\(.*?\)' |  awk '/git/{print "source="$1}' | sed 's/source=//g' | sed '/http/p' | sed 's/(//;s/)//g' | tr -d '\0' | head -1)
+      eval "$(curl -s "https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=$pkgname" | grep "$custom_pkgbuild_vars")"
+      eval source="$(curl -s "https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=$pkgname" | \
+        grep -zPo '(?s)source=\(.*?\)' | \
+        awk '/git/{print "source="$1}' | \
+        sed 's/source=//g' | sed '/http/p' | \
+        sed 's/(//;s/)//g' | tr -d '\0' | head -1)"
       source=$(sed 's/^\(.*\)\(http.*$\)/\2/;s/\"//;s/'\''//' <<< "$source")
       source=$(cut -f1 -d"#" <<< "$source")
     fi
