@@ -14,9 +14,9 @@ msgstr ""
 
 msgid "%d devel-update available from AUR"
 msgid_plural "%d devel-updates available from AUR"
-msgstr[0] "%d разработка - обновление доступно из AUR"
-msgstr[1] "%d разработка - обновления доступно из AUR"
-msgstr[2] "%d разработка - обновлений доступно из AUR"
+msgstr[0] "%d devel-обновление доступно из AUR"
+msgstr[1] "%d devel-обновления доступно из AUR"
+msgstr[2] "%d devel-обновлений доступно из AUR"
 
 msgid "%d update available from AUR"
 msgid_plural "%d updates available from AUR"
