@@ -240,7 +240,7 @@ while true; do
   fi
   if [ $devel == true ];then
     if [ "$devel_updates_count" -gt 0 ]; then
-      template=$(ngettext "waybar-updates" "%d update available from Devel" "%d updates available from Devel" "$devel_updates_count")
+      template=$(ngettext "waybar-updates" "%d devel-update available from AUR" "%d devel-updates available from AUR" "$devel_updates_count")
       # shellcheck disable=SC2059
       notify-send -a waybar-updates -u normal -i software-update-available-symbolic \
         "$(printf "$template" "$devel_updates_count")" \
