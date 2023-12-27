@@ -5,7 +5,8 @@ usage() {
     -i, --interval        Interval between checks
     -c, --cycles          Cycles between online checks (e.g. 6s * 600 cycles = 3600s = 1h between online checks)
     -l, --packages-limit  Maximum number of packages to be shown in notifications and tooltip
-    -d, --devel           Enable devel checks"
+    -d, --devel           Enable check for development packages update
+    -n, --news            Print new news from the Arch Linux homepage. News is considered new if it is newer than the build date of all native packages"
   exit 2
 }
 
@@ -13,8 +14,9 @@ interval=6
 cycles_number=600
 packages_limit=10
 devel=false
+news=false
 
-PARSED_ARGUMENTS=$(getopt -o "hi:c:l:d::" --long "help,interval,cycles,packages-limit,devel::" --name "waybar-updates" -- "$@")
+PARSED_ARGUMENTS=$(getopt -o "hi:c:l:d::n::" --long "help,interval,cycles,packages-limit,devel::,news::" --name "waybar-updates" -- "$@")
 eval set -- "$PARSED_ARGUMENTS"
 while :; do
   case "$1" in
@@ -32,6 +34,10 @@ while :; do
     ;;
   -d | --devel)
     devel=true
+    shift 2
+    ;;
+  -n | --news)
+    news=true
     shift 2
     ;;
   -h | --help) usage ;;
@@ -139,6 +145,68 @@ function check_aur_updates() {
   aur_updates_count=$(echo "$aur_updates" | grep -vc ^$)
 }
 
+function check_news() {
+  date_format=+$(locale -k LC_TIME | grep ^d_fmt | cut -d= -f2)
+
+  aur=$(pacman -Qqm)
+  native=$(pacman -Qneq)
+
+  last_native_app_build_date=$(paclog --grep="upgraded " | grep -Ev "${aur//$'\n'/'|'}" |  grep -wE "${native//$'\n'/'|'}" | tail -1 | awk '{print $1}')
+  last_native_app_build_date="2023-11-01T21:25:21+0100" # DEBUG pour avoir les deux derniers affichés
+
+  last_native_app_build_date=$(date --date "${last_native_app_build_date}" +%s)
+
+  feed=$(curl -s https://archlinux.org/feeds/news/)
+
+  read_feed() {
+    local IFS='>'
+    read -rd '<' TAG VALUE
+  }
+
+  rem_html() {
+    echo "$1" | sed -e 's/&lt;/</g' \
+      -e 's/&gt;/>/g' \
+      -e 's/<[^>]*>//g' \
+      -e 's/&amp;gt;/>/g;/&amp;lt;/g' \
+      -e 's/&gt;/>/g;s/&lt;/</g'
+  }
+
+  while read_feed; do
+    case $TAG in
+    'item')
+      title=''
+      link=''
+      pubDate=''
+      description=''
+      ;;
+    'title')
+      title=$(rem_html "$VALUE")
+      ;;
+    'link')
+      link="$VALUE"
+      ;;
+    'pubDate')
+      pubDate_s=$(date --date "$VALUE" +%s)
+      pubDate=$(date --date "$VALUE" "$date_format")
+      ;;
+    'description')
+      description=$(rem_html "$VALUE")
+      ;;
+    '/item')
+      if [ "$pubDate_s" -ge "$last_native_app_build_date" ]; then
+        command=$(notify-send -a waybar-updates -u normal -i software-update-available-symbolic \
+          --action "readmore=Read online" \
+          "$(printf '%s: %s' "${pubDate:1:-1}" "$title")" \
+          "$description")
+        if [[ "$command" == "readmore" ]]; then
+          xdg-open "$link"
+        fi
+      fi
+      ;;
+    esac
+  done <<<"$feed"
+}
+
 function check_updates() {
   if [ "$1" == "online" ]; then
     check_pacman_updates online
@@ -190,6 +258,7 @@ while true; do
 
   if [ "$cycle" -ge "$cycles_number" ]; then
     check_updates online
+    if [ $news == true ];then check_news; fi
     cycle=0
   else
     check_updates offline
