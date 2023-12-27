@@ -242,6 +242,7 @@ function cleanup() {
 
 # sync at the first start
 check_updates online
+if [ $news == true ];then check_news; fi
 pacman_updates_checksum=""
 aur_updates_checksum=""
 devel_updates_checksum=""
