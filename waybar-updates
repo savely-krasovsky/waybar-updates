@@ -154,7 +154,7 @@ function check_news() {
   last_native_app_build_date=$(paclog --grep="upgraded " | grep -Ev "${aur//$'\n'/'|'}" |  grep -wE "${native//$'\n'/'|'}" | tail -1 | awk '{print $1}')
   # last_native_app_build_date="2023-11-01T21:25:21+0100" # Uncomment to try
 
-  last_native_app_build_date=$(date --date "${last_native_app_build_date}" +%s)
+  last_native_app_build_date=$(date --date "${last_native_app_build_date:1:-1}" +%s)
 
   feed=$(curl -s https://archlinux.org/feeds/news/)
 
