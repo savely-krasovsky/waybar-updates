@@ -152,7 +152,7 @@ function check_news() {
   native=$(pacman -Qneq)
 
   last_native_app_build_date=$(paclog --grep="upgraded " | grep -Ev "${aur//$'\n'/'|'}" |  grep -wE "${native//$'\n'/'|'}" | tail -1 | awk '{print $1}')
-  last_native_app_build_date="2023-11-01T21:25:21+0100" # DEBUG pour avoir les deux derniers affichés
+  # last_native_app_build_date="2023-11-01T21:25:21+0100" # Uncomment to try
 
   last_native_app_build_date=$(date --date "${last_native_app_build_date}" +%s)
 
@@ -194,7 +194,7 @@ function check_news() {
       ;;
     '/item')
       if [ "$pubDate_s" -ge "$last_native_app_build_date" ]; then
-        command=$(notify-send -a waybar-updates -u normal -i software-update-available-symbolic \
+        command=$(notify-send -a waybar-updates -u normal -i notification-new-symbolic \
           --action "readmore=Read online" \
           "$(printf '%s: %s' "${pubDate:1:-1}" "$title")" \
           "$description")
