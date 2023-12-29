@@ -2,11 +2,13 @@
 
 usage() {
   echo "Usage: waybar-updates [options]
-    -i, --interval        Interval between checks
-    -c, --cycles          Cycles between online checks (e.g. 6s * 600 cycles = 3600s = 1h between online checks)
-    -l, --packages-limit  Maximum number of packages to be shown in notifications and tooltip
-    -d, --devel           Enable check for development packages update
-    -n, --news            Print new news from the Arch Linux homepage. News is considered new if it is newer than the build date of all native packages"
+    -i, --interval         Interval between checks
+    -c, --cycles           Cycles between online checks (e.g. 6s * 600 cycles = 3600s = 1h between online checks)
+    -l, --packages-limit   Maximum number of packages to be shown in notifications and tooltip
+    -d, --devel            Enable check for development packages update
+    -n, --news [(opt) all] Print new news from the Arch Linux homepage.
+                           News is considered new if it is newer than the build date of all native packages.
+                           Run with --news all to print all news regardless of the publication date."
   exit 2
 }
 
