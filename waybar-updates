@@ -17,6 +17,7 @@ cycles_number=600
 packages_limit=10
 devel=false
 news=false
+allnews=false
 
 PARSED_ARGUMENTS=$(getopt -o "hi:c:l:d::n::" --long "help,interval,cycles,packages-limit,devel::,news::" --name "waybar-updates" -- "$@")
 eval set -- "$PARSED_ARGUMENTS"
@@ -41,6 +42,9 @@ while :; do
   -n | --news)
     news=true
     shift 2
+    if [ "$2" == "all" ]; then
+      allnews=true
+    fi
     ;;
   -h | --help) usage ;;
   --)
@@ -195,7 +199,7 @@ function check_news() {
       description=$(rem_html "$VALUE")
       ;;
     '/item')
-      if [ "$pubDate_s" -ge "$last_native_app_build_date" ]; then
+      if { [ "$pubDate_s" -ge "$last_native_app_build_date" ] || [ $allnews == true ] ;}; then
         command=$(notify-send -a waybar-updates -u normal -i notification-new-symbolic \
           --action "readmore=Read online" \
           "$(printf '%s: %s' "${pubDate:1:-1}" "$title")" \
