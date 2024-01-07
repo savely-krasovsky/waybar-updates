@@ -106,9 +106,9 @@ function build_devel_list() {
   do
     (( i++ ))
     if [ -z "$source" ]; then
-      eval "$(curl -s "https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=$pkgname" | grep "$custom_pkgbuild_vars")"
-      eval source="$(curl -s "https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=$pkgname" | \
-        grep -zPo '(?s)source=\(.*?\)' | \
+      PKGBUILD=$(curl -s "https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=$pkgname")
+      eval "$(grep "$custom_pkgbuild_vars" <<< "$PKGBUILD")"
+      eval source="$(grep -zPo '(?s)source=\(.*?\)' <<< "$PKGBUILD" | \
         awk '/git/{print "source="$1}' | \
         sed 's/source=//g' | sed '/http/p' | \
         sed 's/(//;s/)//g' | tr -d '\0' | head -1)"
@@ -134,7 +134,7 @@ function check_aur_updates() {
     rm -f "$tmp_aur_packages_file"
     tmp_aur_packages_file=$(mktemp --suffix -waybar-updates)
     # shellcheck disable=SC2046
-    new_aur_packages=$(curl -s "https://aur.archlinux.org/rpc?v=5&type=info$(printf '&arg[]=%s' $(echo "$old_aur_packages" | cut -f1 -d' '))" |
+    new_aur_packages=$(curl -s "https://aur.archlinux.org/rpc?v=5&type=info$(printf '&arg[]=%s' $(echo "$old_aur_packages" 2>/dev/null | cut -f1 -d' '))" |
       jq -r '.results[] | .Name + " " + .Version' | tee "$tmp_aur_packages_file")
   elif [ "$1" == "offline" ]; then
     new_aur_packages=$(cat "$tmp_aur_packages_file")
@@ -162,7 +162,7 @@ function check_news() {
 
   last_native_app_build_date=$(date --date "${last_native_app_build_date:1:-1}" +%s)
 
-  feed=$(curl -s https://archlinux.org/feeds/news/)
+  feed=$(curl -s https://archlinux.org/feeds/news/ 2>/dev/null)
 
   read_feed() {
     local IFS='>'
