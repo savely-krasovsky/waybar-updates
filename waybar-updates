@@ -107,11 +107,11 @@ function build_devel_list() {
     (( i++ ))
     if [ -z "$source" ]; then
       PKGBUILD=$(curl -s "https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=$pkgname")
-      eval "$(grep "$custom_pkgbuild_vars" <<< "$PKGBUILD")"
+      eval "$(grep "$custom_pkgbuild_vars" <<< "$PKGBUILD")" 2>/dev/null
       eval source="$(grep -zPo '(?s)source=\(.*?\)' <<< "$PKGBUILD" | \
         awk '/git/{print "source="$1}' | \
         sed 's/source=//g' | sed '/http/p' | \
-        sed 's/(//;s/)//g' | tr -d '\0' | head -1)"
+        sed 's/(//;s/)//g' | tr -d '\0' | head -1) 2>/dev/null"
       source=$(sed 's/^\(.*\)\(http.*$\)/\2/;s/\"//;s/'\''//' <<< "$source")
       source=$(cut -f1 -d"#" <<< "$source")
     fi
