@@ -2,10 +2,13 @@
 
 usage() {
   echo "Usage: waybar-updates [options]
-    -i, --interval        Interval between checks
-    -c, --cycles          Cycles between online checks (e.g. 6s * 600 cycles = 3600s = 1h between online checks)
-    -l, --packages-limit  Maximum number of packages to be shown in notifications and tooltip
-    -d, --devel           Enable devel checks"
+    -i, --interval         Interval between checks
+    -c, --cycles           Cycles between online checks (e.g. 6s * 600 cycles = 3600s = 1h between online checks)
+    -l, --packages-limit   Maximum number of packages to be shown in notifications and tooltip
+    -d, --devel            Enable check for development packages update
+    -n, --news [(opt) all] Print new news from the Arch Linux homepage.
+                           News is considered new if it is newer than the build date of all native packages.
+                           Run with --news all to print all news regardless of the publication date."
   exit 2
 }
 
@@ -13,8 +16,10 @@ interval=6
 cycles_number=600
 packages_limit=10
 devel=false
+news=false
+allnews=false
 
-PARSED_ARGUMENTS=$(getopt -o "hi:c:l:d::" --long "help,interval,cycles,packages-limit,devel::" --name "waybar-updates" -- "$@")
+PARSED_ARGUMENTS=$(getopt -o "hi:c:l:d::n::" --long "help,interval,cycles,packages-limit,devel::,news::" --name "waybar-updates" -- "$@")
 eval set -- "$PARSED_ARGUMENTS"
 while :; do
   case "$1" in
@@ -33,6 +38,13 @@ while :; do
   -d | --devel)
     devel=true
     shift 2
+    ;;
+  -n | --news)
+    news=true
+    shift 2
+    if [ "$2" == "all" ]; then
+      allnews=true
+    fi
     ;;
   -h | --help) usage ;;
   --)
@@ -73,7 +85,6 @@ function check_devel_updates() {
     old_devel_packages=$(awk '{printf ("%s %s\n", $1, $3)}' "$tmp_devel_packages_file")
 
     develpackages=$(LC_ALL=C join <(echo "$old_devel_packages") <(echo "$new_devel_packages"))
-    echo "d:$develpackages"
 
     if [[ $(echo "$develpackages" | grep -vc ^$) -ne 0 ]]; then
       develpackages=$(awk '{printf ("%s %s %s\n", $1, $3, $2)}' <<< "$develpackages")
@@ -95,16 +106,16 @@ function build_devel_list() {
   do
     (( i++ ))
     if [ -z "$source" ]; then
-      eval "$(curl -s "https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=$pkgname" | grep "$custom_pkgbuild_vars")"
-      eval source="$(curl -s "https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=$pkgname" | \
-        grep -zPo '(?s)source=\(.*?\)' | \
+      PKGBUILD=$(curl -s "https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=$pkgname")
+      eval "$(grep "$custom_pkgbuild_vars" <<< "$PKGBUILD")" 2>/dev/null
+      eval source="$(grep -zPo '(?s)source=\(.*?\)' <<< "$PKGBUILD" | \
         awk '/git/{print "source="$1}' | \
         sed 's/source=//g' | sed '/http/p' | \
-        sed 's/(//;s/)//g' | tr -d '\0' | head -1)"
+        sed 's/(//;s/)//g' | tr -d '\0' | head -1) 2>/dev/null"
       source=$(sed 's/^\(.*\)\(http.*$\)/\2/;s/\"//;s/'\''//' <<< "$source")
       source=$(cut -f1 -d"#" <<< "$source")
     fi
-    lastcommit=$(git ls-remote --heads "$source" | awk '{ print $1}' | cut -c1-7)
+    lastcommit=$(git ls-remote --heads "$source" 2>/dev/null | awk '{ print $1}' | cut -c1-7)
     if ! echo "$version" | grep -q "$lastcommit"; then
       echo "$pkgname $version $source ${lastcommit//$'\n'/ }" >> "$tmp_devel_packages_file"
     fi
@@ -123,7 +134,7 @@ function check_aur_updates() {
     rm -f "$tmp_aur_packages_file"
     tmp_aur_packages_file=$(mktemp --suffix -waybar-updates)
     # shellcheck disable=SC2046
-    new_aur_packages=$(curl -s "https://aur.archlinux.org/rpc?v=5&type=info$(printf '&arg[]=%s' $(echo "$old_aur_packages" | cut -f1 -d' '))" |
+    new_aur_packages=$(curl -s "https://aur.archlinux.org/rpc?v=5&type=info$(printf '&arg[]=%s' $(echo "$old_aur_packages" 2>/dev/null | cut -f1 -d' '))" |
       jq -r '.results[] | .Name + " " + .Version' | tee "$tmp_aur_packages_file")
   elif [ "$1" == "offline" ]; then
     new_aur_packages=$(cat "$tmp_aur_packages_file")
@@ -138,6 +149,68 @@ function check_aur_updates() {
 
   aur_updates_checksum=$(echo "$aur_updates" | sha256sum)
   aur_updates_count=$(echo "$aur_updates" | grep -vc ^$)
+}
+
+function check_news() {
+  date_format=+$(locale -k LC_TIME | grep ^d_fmt | cut -d= -f2)
+
+  aur=$(pacman -Qqm)
+  native=$(pacman -Qneq)
+
+  last_native_app_build_date=$(paclog --grep="upgraded " | grep -Ev "${aur//$'\n'/'|'}" |  grep -wE "${native//$'\n'/'|'}" | tail -1 | awk '{print $1}')
+  # last_native_app_build_date="2023-11-01T21:25:21+0100" # Uncomment to try
+
+  last_native_app_build_date=$(date --date "${last_native_app_build_date:1:-1}" +%s)
+
+  feed=$(curl -s https://archlinux.org/feeds/news/ 2>/dev/null)
+
+  read_feed() {
+    local IFS='>'
+    read -rd '<' TAG VALUE
+  }
+
+  rem_html() {
+    echo "$1" | sed -e 's/&lt;/</g' \
+      -e 's/&gt;/>/g' \
+      -e 's/<[^>]*>//g' \
+      -e 's/&amp;gt;/>/g;/&amp;lt;/g' \
+      -e 's/&gt;/>/g;s/&lt;/</g'
+  }
+
+  while read_feed; do
+    case $TAG in
+    'item')
+      title=''
+      link=''
+      pubDate=''
+      description=''
+      ;;
+    'title')
+      title=$(rem_html "$VALUE")
+      ;;
+    'link')
+      link="$VALUE"
+      ;;
+    'pubDate')
+      pubDate_s=$(date --date "$VALUE" +%s)
+      pubDate=$(date --date "$VALUE" "$date_format")
+      ;;
+    'description')
+      description=$(rem_html "$VALUE")
+      ;;
+    '/item')
+      if { [ "$pubDate_s" -ge "$last_native_app_build_date" ] || [ $allnews == true ] ;}; then
+        command=$(notify-send -a waybar-updates -u normal -i notification-new-symbolic \
+          --action "readmore=Read online" \
+          "$(printf '%s: %s' "${pubDate:1:-1}" "$title")" \
+          "$description")
+        if [[ "$command" == "readmore" ]]; then
+          xdg-open "$link"
+        fi
+      fi
+      ;;
+    esac
+  done <<<"$feed"
 }
 
 function check_updates() {
@@ -175,6 +248,7 @@ function cleanup() {
 
 # sync at the first start
 check_updates online
+if [ $news == true ];then check_news; fi
 pacman_updates_checksum=""
 aur_updates_checksum=""
 devel_updates_checksum=""
@@ -191,6 +265,7 @@ while true; do
 
   if [ "$cycle" -ge "$cycles_number" ]; then
     check_updates online
+    if [ $news == true ];then check_news; fi
     cycle=0
   else
     check_updates offline

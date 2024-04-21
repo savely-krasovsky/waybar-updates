@@ -8,7 +8,8 @@ Tiny Waybar module to check Arch Linux updates from official repositories and AU
 - Sends notifications about updates.
 - Supports GNU gettext localization (contribute new po-files!)
 - Checks updates from AUR using Aurweb RPC, so works independently.
-- Can check for development packages upstream changes (see -d [options](#command-line-options))
+- Can check for development packages upstream changes (see -d [option](#command-line-options))
+- Can print new news from the Arch Linux homepage (see -n [option](#command-line-options))
 - Shows updates in the tooltip.
 - Supports two states: `pending-updates` and `updated` to use different icons or hide module.
 - Uses infinite loop to supply Waybar JSON updates.
@@ -81,7 +82,11 @@ The following options are available:
 - `-i, --interval`: Interval between checks (default: 6 seconds)
 - `-c, --cycles`: Cycles between online checks (e.g. 6s * 600 cycles = 3600s = 1h between online checks) (default: 600 cycles)
 - `-l, --packages-limit`: Maximum number of packages to be shown in notifications and tooltip (default: 10)
-- `-d, --devel`: Also check for development packages upstream changes (default:disabled)
+- `-d, --devel`: Also check for development packages upstream changes (default: disabled)
+- `-n, --news` [(opt) all] (default: disabled)
+	- Print new news from the Arch Linux homepage.
+	- News is considered new if it is newer than the build date of all native packages.
+  - Run with --news all to print all news regardless of the publication date.
 
 
 ## Localization
