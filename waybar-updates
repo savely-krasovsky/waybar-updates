@@ -5,7 +5,8 @@ usage() {
     -i, --interval        Interval between checks
     -c, --cycles          Cycles between online checks (e.g. 6s * 600 cycles = 3600s = 1h between online checks)
     -l, --packages-limit  Maximum number of packages to be shown in notifications and tooltip
-    -d, --devel           Enable devel checks"
+    -d, --devel           Enable devel checks
+    -n, --notify          Enable notifications for updats."
   exit 2
 }
 
@@ -13,6 +14,7 @@ interval=6
 cycles_number=600
 packages_limit=10
 devel=false
+notify=false
 
 PARSED_ARGUMENTS=$(getopt -o "hi:c:l:d::" --long "help,interval,cycles,packages-limit,devel::" --name "waybar-updates" -- "$@")
 eval set -- "$PARSED_ARGUMENTS"
@@ -32,6 +34,10 @@ while :; do
     ;;
   -d | --devel)
     devel=true
+    shift 2
+    ;;
+  -n | --notify)
+    notify=true
     shift 2
     ;;
   -h | --help) usage ;;
@@ -173,6 +179,13 @@ function cleanup() {
   exit 0
 }
 
+function sendNotification() {
+  if ! $notify; then
+    return;
+  fi
+  notify-send "$@"
+}
+
 # sync at the first start
 check_updates online
 pacman_updates_checksum=""
@@ -219,7 +232,7 @@ while true; do
   if [ "$pacman_updates_count" -gt 0 ]; then
     template=$(ngettext "waybar-updates" "%d update available from pacman" "%d updates available from pacman" "$pacman_updates_count")
     # shellcheck disable=SC2059
-    notify-send -a waybar-updates -u normal -i software-update-available-symbolic \
+    sendNotification -a waybar-updates -u normal -i software-update-available-symbolic \
       "$(printf "$template" "$pacman_updates_count")" \
       "$(echo "$pacman_updates" | head -n "$packages_limit")"
 
@@ -228,7 +241,7 @@ while true; do
   if [ "$aur_updates_count" -gt 0 ]; then
     template=$(ngettext "waybar-updates" "%d update available from AUR" "%d updates available from AUR" "$aur_updates_count")
     # shellcheck disable=SC2059
-    notify-send -a waybar-updates -u normal -i software-update-available-symbolic \
+    sendNotification -a waybar-updates -u normal -i software-update-available-symbolic \
       "$(printf "$template" "$aur_updates_count")" \
       "$(echo "$aur_updates" | head -n "$packages_limit")"
 
@@ -242,7 +255,7 @@ while true; do
     if [ "$devel_updates_count" -gt 0 ]; then
       template=$(ngettext "waybar-updates" "%d devel-update available from AUR" "%d devel-updates available from AUR" "$devel_updates_count")
       # shellcheck disable=SC2059
-      notify-send -a waybar-updates -u normal -i software-update-available-symbolic \
+      sendNotification -a waybar-updates -u normal -i software-update-available-symbolic \
         "$(printf "$template" "$devel_updates_count")" \
         "$(echo "$devel_updates" | head -n "$packages_limit")"
 
