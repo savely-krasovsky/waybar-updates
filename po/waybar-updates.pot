@@ -13,5 +13,30 @@ msgstr[0] ""
 msgstr[1] ""
 msgstr[2] ""
 
+msgid "%d update"
+msgid_plural "%d updates"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+msgid "%d Name"
+msgid_plural "%d Names"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+
+msgid "%d old version"
+msgid_plural "%d old version"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+msgid "%d New version"
+msgid_plural "%d New version"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
 msgid "System is up to date"
-msgstr ""
+msgstr ""        

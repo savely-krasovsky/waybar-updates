@@ -1,5 +1,4 @@
 #!/bin/bash
-
 usage() {
   echo "Usage: waybar-updates [options]
     -i, --interval        Interval between checks
@@ -163,6 +162,16 @@ function check_updates() {
   fi
 }
 
+stringToLen() {
+  local STRING="$1"
+  local LEN="$2"
+  if [ ${#STRING} -gt "$LEN" ]; then
+    echo "${STRING:0:$((LEN - 2))}.."
+  else
+    printf "%-20s" "$STRING"
+  fi
+}
+
 function json() {
   jq --unbuffered --null-input --compact-output \
     --arg text "$1" \
@@ -228,7 +237,7 @@ while true; do
 
   # send pushes, limit the body by 10 packages;
   # also create message that will be used as tooltip
-  tooltip=""
+  update_list=""
   if [ "$pacman_updates_count" -gt 0 ]; then
     template=$(ngettext "waybar-updates" "%d update available from pacman" "%d updates available from pacman" "$pacman_updates_count")
     # shellcheck disable=SC2059
@@ -236,7 +245,7 @@ while true; do
       "$(printf "$template" "$pacman_updates_count")" \
       "$(echo "$pacman_updates" | head -n "$packages_limit")"
 
-    tooltip+="$pacman_updates"
+    update_list+="$pacman_updates"
   fi
   if [ "$aur_updates_count" -gt 0 ]; then
     template=$(ngettext "waybar-updates" "%d update available from AUR" "%d updates available from AUR" "$aur_updates_count")
@@ -244,11 +253,11 @@ while true; do
     sendNotification -a waybar-updates -u normal -i software-update-available-symbolic \
       "$(printf "$template" "$aur_updates_count")" \
       "$(echo "$aur_updates" | head -n "$packages_limit")"
-
-    if [ -z "$tooltip" ]; then
-      tooltip+="$aur_updates"
+    
+    if [ -z "$update_list" ]; then
+      update_list+="$aur_updates"
     else
-      tooltip+="\n$aur_updates"
+      update_list+="\n$aur_updates"
     fi
   fi
   if [ $devel == true ];then
@@ -259,13 +268,27 @@ while true; do
         "$(printf "$template" "$devel_updates_count")" \
         "$(echo "$devel_updates" | head -n "$packages_limit")"
 
-      if [ -z "$tooltip" ]; then
-        tooltip+="$devel_updates"
+      if [ -z "$update_list" ]; then
+        update_list+="$devel_updates"
       else
-        tooltip+="\n$devel_updates"
+        update_list+="\n$devel_updates"
       fi
     fi
   fi
+
+  tooltip=""
+  tooltip="<b>$total_updates_count   $(ngettext "waybar-updates" "update" "updates" ) (arch+aur) </b>\n"
+  tooltip+=" <b>$(stringToLen "Name" 20) $(stringToLen "Old Version" 20) $(stringToLen "New Version" 20)</b>\n"
+
+  IFS=$'\n' read -d '' -r -a update_array <<< "$update_list"
+  for update_line in "${update_array[@]}"; do
+    pkgname=$(stringToLen "$(echo "$update_line" | awk '{print $1}')" 20)
+    prev_version=$(stringToLen "$(echo "$update_line" | awk '{print $2}')" 20)
+    next_version=$(stringToLen "$(echo "$update_line" | awk '{print $4}')" 20)
+    tooltip+="<b> $pkgname </b>$prev_version $next_version\n"
+  done
+  tooltip=${tooltip::-2}
+
   if [ "$total_updates_count" -gt 0 ]; then
     json $total_updates_count "pending-updates" "$(echo -e "$tooltip" | head -n "$packages_limit")" "pending-updates"
   else
