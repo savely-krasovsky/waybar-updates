@@ -2,6 +2,7 @@
 
 usage() {
   echo "Usage: waybar-updates [options]
+    -f, --format          Custom format string with one/more of {aur}, {pacman} or {total}
     -i, --interval        Interval between checks
     -c, --cycles          Cycles between online checks (e.g. 6s * 600 cycles = 3600s = 1h between online checks)
     -l, --packages-limit  Maximum number of packages to be shown in notifications and tooltip
@@ -16,10 +17,14 @@ packages_limit=10
 devel=false
 notify=false
 
-PARSED_ARGUMENTS=$(getopt -o "hi:c:l:dn" --long "help,interval:,cycles:,packages-limit:,devel,notify" --name "waybar-updates" -- "$@")
+PARSED_ARGUMENTS=$(getopt -o "hf:i:c:l:dn" --long "help,format:,interval:,cycles:,packages-limit:,devel,notify" --name "waybar-updates" -- "$@")
 eval set -- "$PARSED_ARGUMENTS"
 while :; do
   case "$1" in
+  -f | --format)
+    format="$2"
+    shift 2
+    ;;
   -i | --interval)
     interval="$2"
     shift 2
@@ -164,8 +169,16 @@ function check_updates() {
 }
 
 function json() {
+  local output=$1
+
+  if [[ -n "$1" && -n "$format" ]]; then
+    output="${format/{aur\}/$aur_updates_count}"
+    output="${output/{pacman\}/$pacman_updates_count}"
+    output="${output/{total\}/$total_updates_count}"
+  fi
+
   jq --unbuffered --null-input --compact-output \
-    --arg text "$1" \
+    --arg text "$output" \
     --arg alt "$2" \
     --arg tooltip "$3" \
     --arg class "$4" \
