@@ -16,7 +16,7 @@ packages_limit=10
 devel=false
 notify=false
 
-PARSED_ARGUMENTS=$(getopt -o "hi:c:l:d" --long "help,interval:,cycles:,packages-limit:,devel" --name "waybar-updates" -- "$@")
+PARSED_ARGUMENTS=$(getopt -o "hi:c:l:dn" --long "help,interval:,cycles:,packages-limit:,devel,notify" --name "waybar-updates" -- "$@")
 eval set -- "$PARSED_ARGUMENTS"
 while :; do
   case "$1" in
@@ -38,7 +38,7 @@ while :; do
     ;;
   -n | --notify)
     notify=true
-    shift 2
+    shift
     ;;
   -h | --help) usage ;;
   --)
