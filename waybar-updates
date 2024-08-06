@@ -13,7 +13,7 @@ usage() {
 }
 
 format="{total}"
-tooltip_format="{ :pacman: }{  :aur: }\n\n{}"
+tooltip_format="{ :pacman: }{  :aur: }{  :dev}\n\n{}"
 interval=6
 cycles_number=600
 packages_limit=10
@@ -177,28 +177,32 @@ function check_updates() {
 }
 
 format_output() {
-  local aur_label pacman_label total_label
+  local aur_label dev_label pacman_label total_label
 
   [ "$aur_updates_count" -gt 0 ] && aur_label="\2${aur_updates_count}\4"
+  [ "$devel_updates_count" -gt 0 ] && dev_label="\2${devel_updates_count}\4"
   [ "$pacman_updates_count" -gt 0 ] && pacman_label="\2${pacman_updates_count}\4"
   [ "$total_updates_count" -gt 0 ] && total_label="\2${total_updates_count}\4"
 
   echo -n "$format" | tr '\n' '\r' | sed \
     -e 's/{\(\([^{]\+\):\)\?aur\(:\([^}]\+\)\)\?}/'"$aur_label"'/' \
+    -e 's/{\(\([^{]\+\):\)\?dev\(:\([^}]\+\)\)\?}/'"$dev_label"'/' \
     -e 's/{\(\([^{]\+\):\)\?pacman\(:\([^}]\+\)\)\?}/'"$pacman_label"'/' \
     -e 's/{\(\([^{]\+\):\)\?total\(:\([^}]\+\)\)\?}/'"$total_label"'/'
 }
 
 format_tooltip() {
-  local aur_label list pacman_label total_label content="$tooltip_format"
+  local aur_label dev_label list pacman_label total_label content="$tooltip_format"
 
   [ "$aur_updates_count" -gt 0 ] && aur_label="\2${aur_updates_count}\4"
+  [ "$devel_updates_count" -gt 0 ] && dev_label="\2${devel_updates_count}\4"
   [ "$pacman_updates_count" -gt 0 ] && pacman_label="\2${pacman_updates_count}\4"
   [ "$total_updates_count" -gt 0 ] && total_label="\2${total_updates_count}\4"
 
   list="$(echo -e "$tooltip" | head -n "$packages_limit")"
   content="$(echo -n "$tooltip_format" | tr '\n' '\r' | sed \
     -e 's/{\(\([^{]\+\):\)\?aur\(:\([^}]\+\)\)\?}/'"$aur_label"'/' \
+    -e 's/{\(\([^{]\+\):\)\?dev\(:\([^}]\+\)\)\?}/'"$dev_label"'/' \
     -e 's/{\(\([^{]\+\):\)\?pacman\(:\([^}]\+\)\)\?}/'"$pacman_label"'/' \
     -e 's/{\(\([^{]\+\):\)\?total\(:\([^}]\+\)\)\?}/'"$total_label"'/' \
   )"
