@@ -3,6 +3,7 @@
 usage() {
   echo "Usage: waybar-updates [options]
     -f, --format          Custom format string with one/more of {aur}, {pacman} or {total}
+    -t, --tooltip         Custom format string for the tooltip (use {} for the update list)
     -i, --interval        Interval between checks
     -c, --cycles          Cycles between online checks (e.g. 6s * 600 cycles = 3600s = 1h between online checks)
     -l, --packages-limit  Maximum number of packages to be shown in notifications and tooltip
@@ -12,18 +13,24 @@ usage() {
 }
 
 format="{total}"
+tooltip_format="{ :pacman: }{  :aur: }\n\n{}"
 interval=6
 cycles_number=600
 packages_limit=10
 devel=false
 notify=false
 
-PARSED_ARGUMENTS=$(getopt -o "hf:i:c:l:dn" --long "help,format:,interval:,cycles:,packages-limit:,devel,notify" --name "waybar-updates" -- "$@")
+PARSED_ARGUMENTS=$(getopt --name "waybar-updates" -o "hf:t:i:c:l:dn" --long \
+  "help,format:,tooltip:,interval:,cycles:,packages-limit:,devel,notify" -- "$@")
 eval set -- "$PARSED_ARGUMENTS"
 while :; do
   case "$1" in
   -f | --format)
     format="$2"
+    shift 2
+    ;;
+  -t | --tooltip)
+    tooltip_format="$2"
     shift 2
     ;;
   -i | --interval)
@@ -182,6 +189,23 @@ format_output() {
     -e 's/{\(\([^{]\+\):\)\?total\(:\([^}]\+\)\)\?}/'"$total_label"'/'
 }
 
+format_tooltip() {
+  local aur_label list pacman_label total_label content="$tooltip_format"
+
+  [ "$aur_updates_count" -gt 0 ] && aur_label="\2${aur_updates_count}\4"
+  [ "$pacman_updates_count" -gt 0 ] && pacman_label="\2${pacman_updates_count}\4"
+  [ "$total_updates_count" -gt 0 ] && total_label="\2${total_updates_count}\4"
+
+  list="$(echo -e "$tooltip" | head -n "$packages_limit")"
+  content="$(echo -n "$tooltip_format" | tr '\n' '\r' | sed \
+    -e 's/{\(\([^{]\+\):\)\?aur\(:\([^}]\+\)\)\?}/'"$aur_label"'/' \
+    -e 's/{\(\([^{]\+\):\)\?pacman\(:\([^}]\+\)\)\?}/'"$pacman_label"'/' \
+    -e 's/{\(\([^{]\+\):\)\?total\(:\([^}]\+\)\)\?}/'"$total_label"'/' \
+  )"
+
+  echo -e "${content//{\}/$list}"
+}
+
 function json() {
   jq --unbuffered --null-input --compact-output \
     --arg text "$1" \
@@ -286,7 +310,7 @@ while true; do
     fi
   fi
   if [ "$total_updates_count" -gt 0 ]; then
-    json "$(format_output)" "pending-updates" "$(echo -e "$tooltip" | head -n "$packages_limit")" "pending-updates"
+    json "$(format_output)" "pending-updates" "$(format_tooltip)" "pending-updates"
   else
     json "" "updated" "$(gettext "waybar-updates" "System is up to date")" "updated"
   fi
