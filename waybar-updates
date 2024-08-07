@@ -12,8 +12,10 @@ usage() {
   exit 2
 }
 
-text_format="{total}"
-tooltip_format="\t\t {\t  :pacman}{\t  :aur}{\t  :dev}\n\n{}"
+declare -A formats=()
+formats[text]="{total}"
+formats[tooltip]="\t\t {\t  :pacman}{\t  :aur}{\t  :dev}\n\n{}"
+
 interval=6
 cycles_number=600
 packages_limit=10
@@ -26,11 +28,11 @@ eval set -- "$PARSED_ARGUMENTS"
 while :; do
   case "$1" in
   -f | --format)
-    text_format="$2"
+    formats[text]="$2"
     shift 2
     ;;
   -t | --tooltip)
-    tooltip_format="$2"
+    formats[tooltip]="$2"
     shift 2
     ;;
   -i | --interval)
@@ -177,14 +179,14 @@ check_updates() {
 }
 
 format() {
-  local text format_arg="${1}_format" aur_label dev_label pacman_label total_label
+  local text format_arg="${formats[$1]}" aur_label dev_label pacman_label total_label
 
   [ "$aur_updates_count" -gt 0 ] && aur_label="\2${aur_updates_count}\4"
   [ "$devel_updates_count" -gt 0 ] && dev_label="\2${devel_updates_count}\4"
   [ "$pacman_updates_count" -gt 0 ] && pacman_label="\2${pacman_updates_count}\4"
   [ "$total_updates_count" -gt 0 ] && total_label="\2${total_updates_count}\4"
 
-  text="$(echo -n "${!format_arg}" | tr '\n' '\r' | sed \
+  text="$(echo -n "${format_arg}" | tr '\n' '\r' | sed \
     -e 's/{\(\([^{]\+\):\)\?aur\(:\([^}]\+\)\)\?}/'"$aur_label"'/' \
     -e 's/{\(\([^{]\+\):\)\?dev\(:\([^}]\+\)\)\?}/'"$dev_label"'/' \
     -e 's/{\(\([^{]\+\):\)\?pacman\(:\([^}]\+\)\)\?}/'"$pacman_label"'/' \
