@@ -12,8 +12,8 @@ usage() {
   exit 2
 }
 
-format="{total}"
-tooltip_format="{ :pacman: }{  :aur: }{  :dev}\n\n{}"
+text_format="{total}"
+tooltip_format="\t\t {\t  :pacman}{\t  :aur}{\t  :dev}\n\n{}"
 interval=6
 cycles_number=600
 packages_limit=10
@@ -26,7 +26,7 @@ eval set -- "$PARSED_ARGUMENTS"
 while :; do
   case "$1" in
   -f | --format)
-    format="$2"
+    text_format="$2"
     shift 2
     ;;
   -t | --tooltip)
@@ -65,7 +65,7 @@ while :; do
   esac
 done
 
-function check_pacman_updates() {
+check_pacman_updates() {
   if [ "$1" == "online" ]; then
     pacman_updates=$(checkupdates --nocolor)
   elif [ "$1" == "offline" ]; then
@@ -76,7 +76,7 @@ function check_pacman_updates() {
   pacman_updates_count=$(echo "$pacman_updates" | grep -vc ^$)
 }
 
-function check_devel_updates() {
+check_devel_updates() {
   ignored_packages=$(pacman-conf IgnorePkg)
   if [ "$1" == "online" ]; then
     develsuffixes="git"
@@ -104,7 +104,7 @@ function check_devel_updates() {
   devel_updates_count=$(echo "$devel_updates" | grep -vc ^$)
 }
 
-function build_devel_list() {
+build_devel_list() {
   custom_pkgbuild_vars="_gitname=\|_githubuser=\|_githubrepo=\|_gitcommit=\|url=\|_pkgname=\|_gitdir=\|_repo_name=\|_gitpkgname=\|source_dir=\|_name="
 
   truncate -s 0 "$tmp_devel_packages_file"
@@ -130,7 +130,7 @@ function build_devel_list() {
   done <<< "$1"
 }
 
-function check_aur_updates() {
+check_aur_updates() {
   ignored_packages=$(pacman-conf IgnorePkg)
   if [ -n "$ignored_packages" ]; then
       old_aur_packages=$(pacman -Qm | grep -vF "$ignored_packages")
@@ -159,7 +159,7 @@ function check_aur_updates() {
   aur_updates_count=$(echo "$aur_updates" | grep -vc ^$)
 }
 
-function check_updates() {
+check_updates() {
   if [ "$1" == "online" ]; then
     check_pacman_updates online
     check_aur_updates online
@@ -176,41 +176,50 @@ function check_updates() {
   fi
 }
 
-format_output() {
-  local aur_label dev_label pacman_label total_label
+format() {
+  local text format_arg="${1}_format" aur_label dev_label pacman_label total_label
 
   [ "$aur_updates_count" -gt 0 ] && aur_label="\2${aur_updates_count}\4"
   [ "$devel_updates_count" -gt 0 ] && dev_label="\2${devel_updates_count}\4"
   [ "$pacman_updates_count" -gt 0 ] && pacman_label="\2${pacman_updates_count}\4"
   [ "$total_updates_count" -gt 0 ] && total_label="\2${total_updates_count}\4"
 
-  echo -n "$format" | tr '\n' '\r' | sed \
-    -e 's/{\(\([^{]\+\):\)\?aur\(:\([^}]\+\)\)\?}/'"$aur_label"'/' \
-    -e 's/{\(\([^{]\+\):\)\?dev\(:\([^}]\+\)\)\?}/'"$dev_label"'/' \
-    -e 's/{\(\([^{]\+\):\)\?pacman\(:\([^}]\+\)\)\?}/'"$pacman_label"'/' \
-    -e 's/{\(\([^{]\+\):\)\?total\(:\([^}]\+\)\)\?}/'"$total_label"'/'
-}
-
-format_tooltip() {
-  local aur_label dev_label list pacman_label total_label content="$tooltip_format"
-
-  [ "$aur_updates_count" -gt 0 ] && aur_label="\2${aur_updates_count}\4"
-  [ "$devel_updates_count" -gt 0 ] && dev_label="\2${devel_updates_count}\4"
-  [ "$pacman_updates_count" -gt 0 ] && pacman_label="\2${pacman_updates_count}\4"
-  [ "$total_updates_count" -gt 0 ] && total_label="\2${total_updates_count}\4"
-
-  list="$(echo -e "$tooltip" | head -n "$packages_limit")"
-  content="$(echo -n "$tooltip_format" | tr '\n' '\r' | sed \
+  text="$(echo -n "${!format_arg}" | tr '\n' '\r' | sed \
     -e 's/{\(\([^{]\+\):\)\?aur\(:\([^}]\+\)\)\?}/'"$aur_label"'/' \
     -e 's/{\(\([^{]\+\):\)\?dev\(:\([^}]\+\)\)\?}/'"$dev_label"'/' \
     -e 's/{\(\([^{]\+\):\)\?pacman\(:\([^}]\+\)\)\?}/'"$pacman_label"'/' \
     -e 's/{\(\([^{]\+\):\)\?total\(:\([^}]\+\)\)\?}/'"$total_label"'/' \
   )"
 
-  echo -e "${content//{\}/$list}"
+  echo -e "${text//{\}/$2}"
 }
 
-function json() {
+send_output() {
+  local source status=pending-updates text tooltip
+
+  if [[ ! $total_updates_count -gt 0 ]]; then
+    json "" updated "$(gettext "waybar-updates" "System is up to date")" updated
+    return
+  fi
+
+  for source in pacman aur devel; do
+    tooltip_append "${source}_updates_count" "${source}_updates"
+  done
+
+  json "$(format text "$total_updates_count")" "$status" "$(format \
+    tooltip "$(echo -e "$tooltip" | head -n "$packages_limit")" \
+  )" "$status"
+}
+
+tooltip_append() {
+  [[ ${!1} -gt 0 ]] || return
+
+  [[ -z $tooltip ]] || tooltip+="\n"
+
+  tooltip+="${!2}"
+}
+
+json() {
   jq --unbuffered --null-input --compact-output \
     --arg text "$1" \
     --arg alt "$2" \
@@ -219,14 +228,14 @@ function json() {
     '{"text": $text, "alt": $alt, "tooltip": $tooltip, "class": $class}'
 }
 
-function cleanup() {
+cleanup() {
   echo "Cleaning up..."
   rm -f "$tmp_aur_packages_file"
   rm -f "$tmp_devel_packages_file"
   exit 0
 }
 
-function sendNotification() {
+send_notification() {
   if ! $notify; then
     return;
   fi
@@ -275,49 +284,30 @@ while true; do
 
   # send pushes, limit the body by 10 packages;
   # also create message that will be used as tooltip
-  tooltip=""
   if [ "$pacman_updates_count" -gt 0 ]; then
     template=$(ngettext "waybar-updates" "%d update available from pacman" "%d updates available from pacman" "$pacman_updates_count")
     # shellcheck disable=SC2059
-    sendNotification -a waybar-updates -u normal -i software-update-available-symbolic \
+    send_notification -a waybar-updates -u normal -i software-update-available-symbolic \
       "$(printf "$template" "$pacman_updates_count")" \
       "$(echo "$pacman_updates" | head -n "$packages_limit")"
-
-    tooltip+="$pacman_updates"
   fi
   if [ "$aur_updates_count" -gt 0 ]; then
     template=$(ngettext "waybar-updates" "%d update available from AUR" "%d updates available from AUR" "$aur_updates_count")
     # shellcheck disable=SC2059
-    sendNotification -a waybar-updates -u normal -i software-update-available-symbolic \
+    send_notification -a waybar-updates -u normal -i software-update-available-symbolic \
       "$(printf "$template" "$aur_updates_count")" \
       "$(echo "$aur_updates" | head -n "$packages_limit")"
-
-    if [ -z "$tooltip" ]; then
-      tooltip+="$aur_updates"
-    else
-      tooltip+="\n$aur_updates"
-    fi
   fi
   if [ $devel == true ];then
     if [ "$devel_updates_count" -gt 0 ]; then
       template=$(ngettext "waybar-updates" "%d devel-update available from AUR" "%d devel-updates available from AUR" "$devel_updates_count")
       # shellcheck disable=SC2059
-      sendNotification -a waybar-updates -u normal -i software-update-available-symbolic \
+      send_notification -a waybar-updates -u normal -i software-update-available-symbolic \
         "$(printf "$template" "$devel_updates_count")" \
         "$(echo "$devel_updates" | head -n "$packages_limit")"
-
-      if [ -z "$tooltip" ]; then
-        tooltip+="$devel_updates"
-      else
-        tooltip+="\n$devel_updates"
-      fi
     fi
   fi
-  if [ "$total_updates_count" -gt 0 ]; then
-    json "$(format_output)" "pending-updates" "$(format_tooltip)" "pending-updates"
-  else
-    json "" "updated" "$(gettext "waybar-updates" "System is up to date")" "updated"
-  fi
 
+  send_output
   sleep "$interval"
 done
