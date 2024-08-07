@@ -194,12 +194,24 @@ format() {
   echo -e "${text//{\}/$2}"
 }
 
+send_notification() {
+  local count="$3" list="$4" source="$2" text type="$1"
+  local fmt="%d ${type} available from ${source}"
+
+  [[ $notify == true && $count -gt 0 ]] || return
+
+  text="$(ngettext waybar-updates "$fmt" "${fmt/update/updates}" "$count")"
+
+  notify-send -a waybar-updates -u normal -i software-update-available-symbolic \
+    "${text//%d/$count}" "$(echo "$list" | head -n "$packages_limit")"
+}
+
 send_output() {
   local source status=pending-updates text tooltip
 
   if [[ ! $total_updates_count -gt 0 ]]; then
     json "" updated "$(gettext "waybar-updates" "System is up to date")" updated
-    return
+    return 1
   fi
 
   for source in pacman aur devel; do
@@ -233,13 +245,6 @@ cleanup() {
   rm -f "$tmp_aur_packages_file"
   rm -f "$tmp_devel_packages_file"
   exit 0
-}
-
-send_notification() {
-  if ! $notify; then
-    return;
-  fi
-  notify-send "$@"
 }
 
 # sync at the first start
@@ -282,32 +287,12 @@ while true; do
     continue
   fi
 
-  # send pushes, limit the body by 10 packages;
-  # also create message that will be used as tooltip
-  if [ "$pacman_updates_count" -gt 0 ]; then
-    template=$(ngettext "waybar-updates" "%d update available from pacman" "%d updates available from pacman" "$pacman_updates_count")
-    # shellcheck disable=SC2059
-    send_notification -a waybar-updates -u normal -i software-update-available-symbolic \
-      "$(printf "$template" "$pacman_updates_count")" \
-      "$(echo "$pacman_updates" | head -n "$packages_limit")"
-  fi
-  if [ "$aur_updates_count" -gt 0 ]; then
-    template=$(ngettext "waybar-updates" "%d update available from AUR" "%d updates available from AUR" "$aur_updates_count")
-    # shellcheck disable=SC2059
-    send_notification -a waybar-updates -u normal -i software-update-available-symbolic \
-      "$(printf "$template" "$aur_updates_count")" \
-      "$(echo "$aur_updates" | head -n "$packages_limit")"
-  fi
-  if [ $devel == true ];then
-    if [ "$devel_updates_count" -gt 0 ]; then
-      template=$(ngettext "waybar-updates" "%d devel-update available from AUR" "%d devel-updates available from AUR" "$devel_updates_count")
-      # shellcheck disable=SC2059
-      send_notification -a waybar-updates -u normal -i software-update-available-symbolic \
-        "$(printf "$template" "$devel_updates_count")" \
-        "$(echo "$devel_updates" | head -n "$packages_limit")"
-    fi
-  fi
+  # Output text and tooltip then send push notifcations, limiting the body to 10 packages;
+  send_output && {
+    send_notification update pacman "$pacman_updates_count" "$pacman_updates"
+    send_notification update AUR "$aur_updates_count" "$aur_updates"
+    send_notification devel-update AUR "$devel_updates_count" "$devel_updates"
+  }
 
-  send_output
   sleep "$interval"
 done
