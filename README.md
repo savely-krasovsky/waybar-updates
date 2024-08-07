@@ -5,8 +5,9 @@
 Tiny Waybar module to check Arch Linux updates from official repositories and AUR.
 
 ## Features
-- Sends notifications about updates.
+- Sends (optional) notifications about updates.
 - Supports GNU gettext localization (contribute new po-files!)
+- Support for [custom formats](#formatting) to show only the numbers you want.
 - Checks updates from AUR using Aurweb RPC, so works independently.
 - Can check for development packages upstream changes (see -d [options](#command-line-options))
 - Shows updates in the tooltip.
@@ -26,7 +27,7 @@ Tiny Waybar module to check Arch Linux updates from official repositories and AU
 - curl
 - jq
 - libnotify
-- git (if using --devel [option](#command-line-options))
+- git (if using `--devel` [option](#command-line-options))
 
 ## Usage
 
@@ -78,11 +79,26 @@ to use localization and don't want to store them in `/usr/share/locale`.
 
 ### Command-line options
 The following options are available:
-- `-i, --interval`: Interval between checks (default: 6 seconds)
-- `-c, --cycles`: Cycles between online checks (e.g. 6s * 600 cycles = 3600s = 1h between online checks) (default: 600 cycles)
-- `-l, --packages-limit`: Maximum number of packages to be shown in notifications and tooltip (default: 10)
-- `-d, --devel`: Also check for development packages upstream changes (default:disabled)
-- `-n , --notify`: Turns on notifications for updates.
+| Option | Value | Default | Description |
+|--------|-------|---------|-------------|
+| `-f`, `--format` | `string` | `{total}` | Custom format used for main output text (see [Formatting](#formatting)) |
+| `-t`, `--tooltip` | `string` |  | Custom tooltip format (see [Formatting](#formatting)) |
+| `-i`, `--interval` | `int` | `6` | Interval (in seconds) between checks |
+| `-c`, `--cycles` | `int` | `600` | Cycles between online checks (e.g. 6s *interval* * 600 *cycles* = 3600s = 1h) |
+| `-l`, `--packages-limit` | `int` | `10` | Maximum number of packages to be shown in notifications and tooltip |
+| `-d`, `--devel` | `none` | `off` | Also check for upstream changes in development packages |
+| `-n`, `--notify` | `none` | `off` | Turns on notifications for updates |
+
+#### Formatting
+
+The tooltip and main text formatters can both use "labels" to format their output.
+
+In `--tooltip`, the `{}` label will be replaced with the package list. In `--format`, it's an alias for `{total}`.
+
+Supported custom count labels are `{aur}`, `{dev}`, `{pacman}` and `{total}`. These labels support a custom prefix and/or suffix which can be used to define icons, for example `{A :aur:\n}`, however keep in mind:
+* Values **must** be separated with a colon (`:`)
+* Values **may** contain newlines and tabs (`\n`, `\r` and `\t`)
+* Values **cannot** contain braces (`{` or `}`), 
 
 
 ## Localization
