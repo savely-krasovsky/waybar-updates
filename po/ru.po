@@ -30,29 +30,8 @@ msgstr[0] "%d обновление доступно из pacman"
 msgstr[1] "%d обновления доступно из pacman"
 msgstr[2] "%d обновлений доступно из pacman"
 
-msgid "update"
-msgid_plural "updates"
-msgstr[0] "обновление"
-msgstr[1] "обновления"
-msgstr[2] "обновлений"
-
-msgid "Name"
-msgid_plural "Names"
-msgstr[0] "Имя"
-msgstr[1] "Имена"
-msgstr[2] "Имен"
-
-msgid "old version"
-msgid_plural "old version"
-msgstr[0] "старая версия"
-msgstr[1] "старые версии"
-msgstr[2] "старых версий"
-
-msgid "New version"
-msgid_plural "New version"
-msgstr[0] "новая версия"
-msgstr[1] "новые версии"
-msgstr[2] "новых версий"
-
-msgid "System is up to date"
+msgid "system is up to date"
 msgstr "Система обновлена"
+
+msgid "nandu"
+msgstr "Система"
