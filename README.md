@@ -43,7 +43,7 @@ Tiny Waybar module to check Arch Linux updates from official repositories and AU
 ...
 
 "custom/pacman": {
-  "format": "{icon}{}",
+  "format": "{icon}{0}",
   "return-type": "json",
   "format-icons": {
     "pending-updates": " ",
