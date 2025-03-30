@@ -8,22 +8,24 @@ usage() {
     -c, --cycles          Cycles between online checks (e.g. 6s * 600 cycles = 3600s = 1h between online checks)
     -l, --packages-limit  Maximum number of packages to be shown in notifications and tooltip
     -d, --devel           Enable devel checks
-    -n, --notify          Enable notifications for updats."
+    -n, --notify          Enable notifications for updates.
+    -k, --kernel          Enable check running kernel with latest stable version from kernel.org"
   exit 2
 }
 
 declare -A formats=()
 formats[text]="{total}"
-formats[tooltip]="\t\t {\t  :pacman}{\t  :aur}{\t  :dev}\n\n{}"
+formats[tooltip]="\t\t {\t  :pacman}{\t  :aur}{\t  :dev}{\t  :kernel}\n\n{}"
 
 interval=6
 cycles_number=600
 packages_limit=10
 devel=false
 notify=false
+kernel=false
 
-PARSED_ARGUMENTS=$(getopt --name "waybar-updates" -o "hf:t:i:c:l:dn" --long \
-  "help,format:,tooltip:,interval:,cycles:,packages-limit:,devel,notify" -- "$@")
+PARSED_ARGUMENTS=$(getopt --name "waybar-updates" -o "hf:t:i:c:l:dnk" --long \
+  "help,format:,tooltip:,interval:,cycles:,packages-limit:,devel,notify,kernel" -- "$@")
 eval set -- "$PARSED_ARGUMENTS"
 while :; do
   case "$1" in
@@ -53,6 +55,10 @@ while :; do
     ;;
   -n | --notify)
     notify=true
+    shift
+    ;;
+  -k | --kernel)
+    kernel=true
     shift
     ;;
   -h | --help) usage ;;
@@ -161,35 +167,57 @@ check_aur_updates() {
   aur_updates_count=$(echo "$aur_updates" | grep -vc ^$)
 }
 
+check_kernel_updates() {
+  if [ $kernel == false ]; then
+    kernel_updates_count=0
+  else
+    running_kernel=$(uname -r)
+    latest_kernel=$(curl -s "https://www.kernel.org/finger_banner" | grep "The latest stable version" | xargs | cut -d ':' -f 2 | xargs)
+    dots=$(echo "$latest_kernel" | grep -o '\.' | wc -l)
+    if [ "$dots" -eq 1 ]; then
+      latest_kernel="$latest_kernel.0"
+    fi
+    if [ "$running_kernel" == "$latest_kernel" ]; then
+      kernel_updates_count=0
+    else
+      kernel_updates_count=1
+      kernel_updates="kernel $running_kernel -> $latest_kernel\n"
+    fi
+  fi
+}
+
 check_updates() {
   if [ "$1" == "online" ]; then
     check_pacman_updates online
     check_aur_updates online
-    if [ $devel == true ];then check_devel_updates online; fi
+    if [ $devel == true ];then check_devel_updates online; else devel_updates_count=0; fi
+    check_kernel_updates;
   elif [ "$1" == "offline" ]; then
     check_pacman_updates offline
     check_aur_updates offline
     if [ $devel == true ];then check_devel_updates offline; fi
   fi
   if [ $devel == true ];then
-    total_updates_count=$((pacman_updates_count + aur_updates_count + devel_updates_count))
+    total_updates_count=$((pacman_updates_count + aur_updates_count + devel_updates_count + kernel_updates_count))
   else
-    total_updates_count=$((pacman_updates_count + aur_updates_count))
+    total_updates_count=$((pacman_updates_count + aur_updates_count + kernel_updates_count))
   fi
 }
 
 format() {
-  local text format_arg="${formats[$1]}" aur_label dev_label pacman_label total_label
+  local text format_arg="${formats[$1]}" aur_label dev_label pacman_label total_label kernel_label
 
   [ "$aur_updates_count" -gt 0 ] && aur_label="\2${aur_updates_count}\4"
   [ "$devel_updates_count" -gt 0 ] && dev_label="\2${devel_updates_count}\4"
   [ "$pacman_updates_count" -gt 0 ] && pacman_label="\2${pacman_updates_count}\4"
+  [ "$kernel_updates_count" -gt 0 ] && kernel_label="\2${kernel_updates_count}\4"
   [ "$total_updates_count" -gt 0 ] && total_label="\2${total_updates_count}\4"
 
   text="$(echo -n "${format_arg}" | tr '\n' '\r' | sed \
     -e 's/{\(\([^{]\+\):\)\?aur\(:\([^}]\+\)\)\?}/'"$aur_label"'/' \
     -e 's/{\(\([^{]\+\):\)\?dev\(:\([^}]\+\)\)\?}/'"$dev_label"'/' \
     -e 's/{\(\([^{]\+\):\)\?pacman\(:\([^}]\+\)\)\?}/'"$pacman_label"'/' \
+    -e 's/{\(\([^{]\+\):\)\?kernel\(:\([^}]\+\)\)\?}/'"$kernel_label"'/' \
     -e 's/{\(\([^{]\+\):\)\?total\(:\([^}]\+\)\)\?}/'"$total_label"'/' \
   )"
 
@@ -216,7 +244,7 @@ send_output() {
     return 1
   fi
 
-  for source in pacman aur devel; do
+  for source in kernel pacman aur devel; do
     tooltip_append "${source}_updates_count" "${source}_updates"
   done
 
@@ -254,6 +282,7 @@ check_updates online
 pacman_updates_checksum=""
 aur_updates_checksum=""
 devel_updates_checksum=""
+kernel_updates_notified=false
 # count cycles to check updates using network sometime
 cycle=0
 
@@ -296,5 +325,11 @@ while true; do
     send_notification devel-update AUR "$devel_updates_count" "$devel_updates"
   }
 
+  if [ "$kernel_updates_count" -gt 0 ]; then
+    if [ $kernel_updates_notified == false ]; then
+      send_notification update kernel "1" "$latest_kernel"
+      kernel_updates_notified=true
+    fi
+  fi
   sleep "$interval"
 done
