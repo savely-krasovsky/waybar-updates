@@ -327,7 +327,7 @@ while true; do
 
   if [ "$kernel_updates_count" -gt 0 ]; then
     if [ $kernel_updates_notified == false ]; then
-      send_notification update kernel "1" "$latest_kernel"
+      send_notification update kernel "1" "$kernel_updates"
       kernel_updates_notified=true
     fi
   fi
