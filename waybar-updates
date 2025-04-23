@@ -207,27 +207,27 @@ check_flatpak_updates() {
     update_entries=${#fupdates[@]}
     for (( i=0; i<update_entries; i++ ));
     do
-      u_code[$i]="$(echo "${fupdates[$i]}" | cut -f 1)"
-      u_version[$i]="$(echo "${fupdates[$i]}" | cut -f 2)"
-      u_branch[$i]="$(echo "${fupdates[$i]}" | cut -f 3)"
-      u_commit[$i]="$(echo "${fupdates[$i]}" | cut -f 4)"
+      u_code[i]="$(echo "${fupdates[i]}" | cut -f 1)"
+      u_version[i]="$(echo "${fupdates[i]}" | cut -f 2)"
+      u_branch[i]="$(echo "${fupdates[i]}" | cut -f 3)"
+      u_commit[i]="$(echo "${fupdates[i]}" | cut -f 4)"
     done
 
     installed_entries=${#finstalled[@]}
     for (( x=0; x<installed_entries; x++ ));
     do
-      i_code[$x]="$(echo "${finstalled[$x]}" | cut -f 2)"
-      i_version[$x]="$(echo "${finstalled[$x]}" | cut -f 3)"
-      i_branch[$x]="$(echo "${finstalled[$x]}" | cut -f 4)"
-      i_commit[$x]="$(echo "${finstalled[$x]}" | cut -f 5)"
-      i_name[$x]="$(echo "${finstalled[$x]}" | cut -f 1)"
+      i_code[x]="$(echo "${finstalled[x]}" | cut -f 2)"
+      i_version[x]="$(echo "${finstalled[x]}" | cut -f 3)"
+      i_branch[x]="$(echo "${finstalled[x]}" | cut -f 4)"
+      i_commit[x]="$(echo "${finstalled[x]}" | cut -f 5)"
+      i_name[x]="$(echo "${finstalled[x]}" | cut -f 1)"
       for (( y=0; y<update_entries; y++ ));
       do
-        if [ "${u_code[$y]}" == "${i_code[$x]}" ] && [ "${u_branch[$y]}" == "${i_branch[$x]}" ]; then
-          if [ "${u_version[$y]}" == "" ] || [ "${u_version[$y]}" == "${i_version[$x]}" ]; then
-              flatpak_updates+=$(printf "%s %s -> %s\n" "${i_name[$x]}" "${i_commit[$x]}" "${u_commit[$y]}\n")
+        if [ "${u_code[y]}" == "${i_code[x]}" ] && [ "${u_branch[y]}" == "${i_branch[x]}" ]; then
+          if [ "${u_version[y]}" == "" ] || [ "${u_version[y]}" == "${i_version[x]}" ]; then
+              flatpak_updates+=$(printf "%s %s -> %s\n" "${i_name[x]}" "${i_commit[x]}" "${u_commit[y]}\n")
           else
-              flatpak_updates+=$(printf "%s %s -> %s\n" "${i_name[$x]}" "${i_version[$x]}" "${u_version[$y]}\n")
+              flatpak_updates+=$(printf "%s %s -> %s\n" "${i_name[x]}" "${i_version[x]}" "${u_version[y]}\n")
           fi
         fi
       done
