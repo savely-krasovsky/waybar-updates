@@ -194,17 +194,15 @@ check_kernel_updates() {
 
 check_flatpak_updates() {
   if [ $flatpak == true ]; then
-    oldIFS=$IFS
-    IFS=$'\n'
     flatpak_updates=""
 
     if [ "$1" == "online" ]; then
-      fupdates=($(flatpak remote-ls --updates -d | cut -f 3,4,5,9))
+      mapfile -t fupdates < <(flatpak remote-ls --updates -d | cut -f 3,4,5,9)
     else 
-      fupdates=($(flatpak remote-ls --updates -d --cached | cut -f 3,4,5,9))
+      mapfile -t fupdates < <(flatpak remote-ls --updates -d --cached | cut -f 3,4,5,9)
     fi
 
-    finstalled=($(flatpak list -d | cut -f 1,3,4,5,10))
+    mapfile -t finstalled < <(flatpak list -d | cut -f 1,3,4,5,10)
 
     update_entries=${#fupdates[@]}
     for (( i=0; i<${update_entries}; i++ ));
@@ -240,7 +238,6 @@ check_flatpak_updates() {
   else
     flatpak_updates_count=0;
   fi
-  IFS=$oldIFS
 }
 
 check_updates() {
