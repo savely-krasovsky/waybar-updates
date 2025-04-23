@@ -9,13 +9,14 @@ usage() {
     -l, --packages-limit  Maximum number of packages to be shown in notifications and tooltip
     -d, --devel           Enable devel checks
     -n, --notify          Enable notifications for updates.
-    -k, --kernel          Enable check running kernel with latest stable version from kernel.org"
+    -k, --kernel          Enable check running kernel with latest stable version from kernel.org
+    -p, --flatpak         Enable Flatpak update check"
   exit 2
 }
 
 declare -A formats=()
 formats[text]="{total}"
-formats[tooltip]="\t\t {\t  :pacman}{\t  :aur}{\t  :dev}{\t  :kernel}\n\n{}"
+formats[tooltip]="\t\t {\t  :pacman}{\t  :aur}{\t  :dev}{\t  :kernel}{\t  :flatpak}\n\n{}"
 
 interval=6
 cycles_number=600
@@ -23,9 +24,10 @@ packages_limit=10
 devel=false
 notify=false
 kernel=false
+flatpak=false
 
-PARSED_ARGUMENTS=$(getopt --name "waybar-updates" -o "hf:t:i:c:l:dnk" --long \
-  "help,format:,tooltip:,interval:,cycles:,packages-limit:,devel,notify,kernel" -- "$@")
+PARSED_ARGUMENTS=$(getopt --name "waybar-updates" -o "hf:t:i:c:l:dnkp" --long \
+  "help,format:,tooltip:,interval:,cycles:,packages-limit:,devel,notify,kernel,flatpak" -- "$@")
 eval set -- "$PARSED_ARGUMENTS"
 while :; do
   case "$1" in
@@ -61,6 +63,10 @@ while :; do
     kernel=true
     shift
     ;;
+  -p | --flatpak)
+    flatpak=true
+    shift
+    ;;    
   -h | --help) usage ;;
   --)
     shift
@@ -186,30 +192,84 @@ check_kernel_updates() {
   fi
 }
 
+check_flatpak_updates() {
+  if [ $flatpak == true ]; then
+    oldIFS=$IFS
+    IFS=$'\n'
+    flatpak_updates=""
+
+    if [ "$1" == "online" ]; then
+      fupdates=($(flatpak remote-ls --updates -d | cut -f 3,4,5,9))
+    else 
+      fupdates=($(flatpak remote-ls --updates -d --cached | cut -f 3,4,5,9))
+    fi
+
+    finstalled=($(flatpak list -d | cut -f 1,3,4,5,10))
+
+    update_entries=${#fupdates[@]}
+    for (( i=0; i<${update_entries}; i++ ));
+    do
+      u_code[$i]=$(echo "${fupdates[$i]}" | cut -f 1)
+      u_version[$i]=$(echo "${fupdates[$i]}" | cut -f 2)
+      u_branch[$i]=$(echo "${fupdates[$i]}" | cut -f 3)
+      u_commit[$i]=$(echo "${fupdates[$i]}" | cut -f 4)
+    done
+
+    installed_entries=${#finstalled[@]}
+    for (( x=0; x<${installed_entries}; x++ ));
+    do
+      i_code[$x]=$(echo "${finstalled[$x]}" | cut -f 2)
+      i_version[$x]=$(echo "${finstalled[$x]}" | cut -f 3)
+      i_branch[$x]=$(echo "${finstalled[$x]}" | cut -f 4)
+      i_commit[$x]=$(echo "${finstalled[$x]}" | cut -f 5)
+      i_name[$x]=$(echo "${finstalled[$x]}" | cut -f 1)
+      for (( y=0; y<${update_entries}; y++ ));
+      do
+        if [ "${u_code[$y]}" == "${i_code[$x]}" ] && [ "${u_branch[$y]}" == "${i_branch[$x]}" ]; then
+          if [ "${u_version[$y]}" == "" ] || [ ${u_version[$y]} == ${i_version[$x]} ]; then
+              flatpak_updates+=$(printf "%s %s -> %s\n" "${i_name[$x]}" "${i_commit[$x]}" "${u_commit[$y]}\n")
+          else
+              flatpak_updates+=$(printf "%s %s -> %s\n" "${i_name[$x]}" "${i_version[$x]}" "${u_version[$y]}\n")
+          fi
+        fi
+      done
+    done
+
+    flatpak_updates_checksum=$(echo "$flatpak_updates" | sha256sum)
+    flatpak_updates_count=$(printf "$flatpak_updates" | wc -l)
+  else
+    flatpak_updates_count=0;
+  fi
+  IFS=$oldIFS
+}
+
 check_updates() {
   if [ "$1" == "online" ]; then
     check_pacman_updates online
     check_aur_updates online
     if [ $devel == true ];then check_devel_updates online; else devel_updates_count=0; fi
-    check_kernel_updates;
+    check_flatpak_updates online
+    check_kernel_updates
   elif [ "$1" == "offline" ]; then
     check_pacman_updates offline
     check_aur_updates offline
+    check_flatpak_updates offline
     if [ $devel == true ];then check_devel_updates offline; fi
   fi
   if [ $devel == true ];then
-    total_updates_count=$((pacman_updates_count + aur_updates_count + devel_updates_count + kernel_updates_count))
+    total_updates_count=$((pacman_updates_count + aur_updates_count + devel_updates_count + flatpak_updates_count + kernel_updates_count))
   else
-    total_updates_count=$((pacman_updates_count + aur_updates_count + kernel_updates_count))
+    total_updates_count=$((pacman_updates_count + aur_updates_count + flatpak_updates_count + kernel_updates_count))
   fi
 }
 
 format() {
-  local text format_arg="${formats[$1]}" aur_label dev_label pacman_label total_label kernel_label
+  local text format_arg="${formats[$1]}" aur_label dev_label pacman_label total_label flatpak_label kernel_label
 
   [ "$aur_updates_count" -gt 0 ] && aur_label="\2${aur_updates_count}\4"
   [ "$devel_updates_count" -gt 0 ] && dev_label="\2${devel_updates_count}\4"
   [ "$pacman_updates_count" -gt 0 ] && pacman_label="\2${pacman_updates_count}\4"
+  [ "$flatpak_updates_count" -gt 0 ] && flatpak_label="\2${flatpak_updates_count}\4"
   [ "$kernel_updates_count" -gt 0 ] && kernel_label="\2${kernel_updates_count}\4"
   [ "$total_updates_count" -gt 0 ] && total_label="\2${total_updates_count}\4"
 
@@ -217,6 +277,7 @@ format() {
     -e 's/{\(\([^{]\+\):\)\?aur\(:\([^}]\+\)\)\?}/'"$aur_label"'/' \
     -e 's/{\(\([^{]\+\):\)\?dev\(:\([^}]\+\)\)\?}/'"$dev_label"'/' \
     -e 's/{\(\([^{]\+\):\)\?pacman\(:\([^}]\+\)\)\?}/'"$pacman_label"'/' \
+    -e 's/{\(\([^{]\+\):\)\?flatpak\(:\([^}]\+\)\)\?}/'"$flatpak_label"'/' \
     -e 's/{\(\([^{]\+\):\)\?kernel\(:\([^}]\+\)\)\?}/'"$kernel_label"'/' \
     -e 's/{\(\([^{]\+\):\)\?total\(:\([^}]\+\)\)\?}/'"$total_label"'/' \
   )"
@@ -244,7 +305,7 @@ send_output() {
     return 1
   fi
 
-  for source in kernel pacman aur devel; do
+  for source in kernel pacman aur devel flatpak; do
     tooltip_append "${source}_updates_count" "${source}_updates"
   done
 
@@ -281,6 +342,7 @@ cleanup() {
 check_updates online
 pacman_updates_checksum=""
 aur_updates_checksum=""
+flatpak_updates_checksum=""
 devel_updates_checksum=""
 kernel_updates_notified=false
 # count cycles to check updates using network sometime
@@ -292,6 +354,7 @@ trap cleanup SIGINT SIGTERM
 while true; do
   previous_pacman_updates_checksum=$pacman_updates_checksum
   previous_aur_updates_checksum=$aur_updates_checksum
+  previous_flatpak_updates_checksum=$flatpak_updates_checksum
   if [ $devel == true ];then previous_devel_updates_checksum=$devel_updates_checksum; fi
 
   if [ "$cycle" -ge "$cycles_number" ]; then
@@ -305,11 +368,13 @@ while true; do
     condition (){
       { [ "$previous_pacman_updates_checksum" == "$pacman_updates_checksum" ] &&
       [ "$previous_aur_updates_checksum" == "$aur_updates_checksum" ] &&
+      [ "$previous_flatpak_updates_checksum" == "$flatpak_updates_checksum" ] &&
       [ "$previous_devel_updates_checksum" == "$devel_updates_checksum" ] ;}
     }
   else
     condition (){
       { [ "$previous_pacman_updates_checksum" == "$pacman_updates_checksum" ] &&
+      [ "$previous_flatpak_updates_checksum" == "$flatpak_updates_checksum" ] &&
       [ "$previous_aur_updates_checksum" == "$aur_updates_checksum" ] ;}
     }
   fi
@@ -322,6 +387,7 @@ while true; do
   send_output && {
     send_notification update pacman "$pacman_updates_count" "$pacman_updates"
     send_notification update AUR "$aur_updates_count" "$aur_updates"
+    send_notification update flatpak "$flatpak_updates_count" "$flatpak_updates"
     send_notification devel-update AUR "$devel_updates_count" "$devel_updates"
   }
 
