@@ -205,7 +205,7 @@ check_flatpak_updates() {
     mapfile -t finstalled < <(flatpak list -d | cut -f 1,3,4,5,10)
 
     update_entries=${#fupdates[@]}
-    for (( i=0; i<${update_entries}; i++ ));
+    for (( i=0; i<update_entries; i++ ));
     do
       u_code[$i]=$(echo "${fupdates[$i]}" | cut -f 1)
       u_version[$i]=$(echo "${fupdates[$i]}" | cut -f 2)
@@ -214,17 +214,17 @@ check_flatpak_updates() {
     done
 
     installed_entries=${#finstalled[@]}
-    for (( x=0; x<${installed_entries}; x++ ));
+    for (( x=0; x<installed_entries; x++ ));
     do
       i_code[$x]=$(echo "${finstalled[$x]}" | cut -f 2)
       i_version[$x]=$(echo "${finstalled[$x]}" | cut -f 3)
       i_branch[$x]=$(echo "${finstalled[$x]}" | cut -f 4)
       i_commit[$x]=$(echo "${finstalled[$x]}" | cut -f 5)
       i_name[$x]=$(echo "${finstalled[$x]}" | cut -f 1)
-      for (( y=0; y<${update_entries}; y++ ));
+      for (( y=0; y<update_entries; y++ ));
       do
         if [ "${u_code[$y]}" == "${i_code[$x]}" ] && [ "${u_branch[$y]}" == "${i_branch[$x]}" ]; then
-          if [ "${u_version[$y]}" == "" ] || [ ${u_version[$y]} == ${i_version[$x]} ]; then
+          if [ "${u_version[$y]}" == "" ] || [ "${u_version[$y]}" == "${i_version[$x]}" ]; then
               flatpak_updates+=$(printf "%s %s -> %s\n" "${i_name[$x]}" "${i_commit[$x]}" "${u_commit[$y]}\n")
           else
               flatpak_updates+=$(printf "%s %s -> %s\n" "${i_name[$x]}" "${i_version[$x]}" "${u_version[$y]}\n")
@@ -234,7 +234,7 @@ check_flatpak_updates() {
     done
 
     flatpak_updates_checksum=$(echo "$flatpak_updates" | sha256sum)
-    flatpak_updates_count=$(printf "$flatpak_updates" | wc -l)
+    flatpak_updates_count=$(printf "%b" "$flatpak_updates" | wc -l)
   else
     flatpak_updates_count=0;
   fi
